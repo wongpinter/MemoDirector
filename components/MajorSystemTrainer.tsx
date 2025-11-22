@@ -154,8 +154,11 @@ export const MajorSystemTrainer: React.FC = () => {
       // @ts-ignore
       const saveAs = window.saveAs;
 
-      if (!AnkiExportLib || !saveAs) {
-        throw new Error("Export libraries failed to load from CDN. Please check internet connection.");
+      if (!AnkiExportLib) {
+         throw new Error("Export libraries failed to load from CDN. Please check internet connection.");
+      }
+      if (!saveAs) {
+         throw new Error("FileSaver library failed to load from CDN. Please check internet connection.");
       }
 
       // Handle potential default export structure
@@ -174,7 +177,7 @@ export const MajorSystemTrainer: React.FC = () => {
       saveAs(zip, 'major-system-rules.apkg');
     } catch (e: any) {
       console.error("APKG Export failed:", e);
-      setExportError("APKG export failed. Downloading CSV backup instead.");
+      setExportError(e.message || "APKG export failed. Downloading CSV backup instead.");
       
       // Slight delay to allow UI to update before fallback download
       setTimeout(() => handleDownloadCSV(), 1500);

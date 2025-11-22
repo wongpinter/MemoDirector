@@ -273,11 +273,15 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
       // @ts-ignore
       const saveAs = window.saveAs;
 
-      if (!AnkiExportLib || !saveAs) {
-        throw new Error("Export libraries failed to load from CDN. Please check your internet connection or ad blocker.");
+      if (!AnkiExportLib) {
+        throw new Error("Export libraries failed to load from CDN. Please check internet connection.");
+      }
+      if (!saveAs) {
+        throw new Error("FileSaver library failed to load from CDN. Please check internet connection.");
       }
 
       // Handle UMD vs ES Module export differences on window
+      // Some builds put the constructor at default, others at root
       const AnkiGen = AnkiExportLib.default || AnkiExportLib;
 
       const apkg = new AnkiGen('MindPalace PAO');
@@ -294,8 +298,9 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
       saveAs(zip, 'mindpalace-pao.apkg');
     } catch (error: any) {
       console.error("APKG generation failed:", error);
-      setExportError("APKG generation failed (likely due to missing WASM/Database support in this browser). Downloading CSV instead.");
-      handleDownloadCSV();
+      setExportError(error.message || "APKG failed. Downloading CSV instead...");
+      // Automatically fallback to CSV after a delay
+      setTimeout(() => handleDownloadCSV(), 1500);
     } finally {
       setIsExporting(false);
     }
