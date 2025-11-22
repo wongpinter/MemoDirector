@@ -502,11 +502,18 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
                         {scene.length} / {CHAR_LIMIT}
                     </div>
                 </div>
-                {scene.length > CHAR_LIMIT && (
-                    <p className="text-[10px] text-amber-400/80 pl-1 animate-in fade-in">
-                        * Keep it snappy! Shorter scenes are easier to recall quickly.
+                
+                {/* Tip for Sensory Details */}
+                <div className="flex justify-between items-start mt-1">
+                    <p className="text-[10px] text-slate-500 pl-1">
+                        <span className="text-indigo-400 font-bold">Tip:</span> Use vivid <span className="text-slate-300">smells, sounds, and textures</span>. Trigger emotions like <span className="text-slate-300">disgust, anger, or humor</span>.
                     </p>
-                )}
+                    {scene.length > CHAR_LIMIT && (
+                        <p className="text-[10px] text-amber-400/80 animate-in fade-in">
+                            * Keep it snappy!
+                        </p>
+                    )}
+                </div>
             </div>
 
             {/* Visual Media Generation Section */}

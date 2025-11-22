@@ -127,15 +127,31 @@ export const getSceneDescription = async (person: string, action: string, object
     if (!ai) return `${person} is ${action} with ${object}.`;
 
     const prompt = `
-        Write a vivid, memorable, one-sentence scene description for a memory palace.
+        You are an expert Memory Palace coach.
+        Generate a "Director's Cut" scene description for a PAO (Person-Action-Object) system.
         
-        Characters: ${person}
+        Subject: ${person}
         Action: ${action}
         Object: ${object}
         
-        The scene should be absurd, funny, or striking to make it easy to remember. 
-        Keep it under 20 words. 
-        Focus on visual details, colors, and sounds.
+        The goal is to create a "Sticky Memory" by invoking SENSES and EMOTIONS.
+        
+        INSTRUCTIONS:
+        1.  **SENSORY FOCUS**: Do not rely on sight. You MUST include specific details for:
+            -   **Smell** (e.g. burning rubber, rotting fish, fresh mint) OR
+            -   **Sound** (e.g. high-pitched screech, wet squelch, thunderous boom) OR
+            -   **Touch** (e.g. slimy, gritty, freezing cold, sticky) OR
+            -   **Taste** (e.g. metallic blood, sour lemon, bitter ash).
+        2.  **EMOTIONAL TRIGGER**: The scene must trigger a specific feeling. Choose one:
+            -   **Disgust** (Gross, molding, bodily fluids)
+            -   **Funny** (Absurd, slapstick, ridiculous)
+            -   **Anger/Violence** (Shattering, crushing, screaming)
+            -   **Fear** (Eerie, dangerous, nightmare)
+        3.  **CONCISE**: Maximum 50 words. Short, punchy, present tense.
+        
+        Example: ${person} furiously bites into the ${object}, which explodes with a screeching metal sound (Sound) and tastes like rotten eggs (Taste/Disgust).
+        
+        Generate ONLY the vivid scene description.
     `;
 
     const response = await ai.models.generateContent({
