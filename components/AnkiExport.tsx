@@ -42,25 +42,48 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
   };
 
   const cardCSS = `
-.card {
-  font-family: 'Segoe UI', system-ui, sans-serif;
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
   background-color: #0f172a;
+}
+
+/* Target Anki's body wrapper class */
+.card {
+  font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+  background-color: #0f172a !important; /* Force dark theme */
   color: #f8fafc;
   font-size: 16px;
   line-height: 1.5;
-  min-height: 500px;
+  margin: 0 !important;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh; /* Ensure full screen fill */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+}
+
+/* Inner container for our content */
+.flashcard-container {
+  width: 100%;
+  max-width: 600px;
   padding: 20px;
   box-sizing: border-box;
-  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
 }
 
 /* Front Side */
 .front-wrapper {
   text-align: center;
+  padding: 40px 20px;
 }
 
 .front-number {
@@ -202,7 +225,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
     const num = item.number.toString().padStart(2, '0');
     const ph = getPhoneticsForNumber(item.number);
     return `
-<div class="card">
+<div class="flashcard-container">
   <div class="front-wrapper">
     <div class="front-number">${num}</div>
     <div class="front-hint">${ph}</div>
@@ -216,7 +239,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
     const sceneText = getSceneText(item);
     
     return `
-<div class="card">
+<div class="flashcard-container">
   <div class="back-container">
     <div class="header">
       <span class="header-number">#${num}</span>
@@ -388,7 +411,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
                     setShowTutorial(true);
                 }}
                 disabled={completedItems.length === 0 || isExporting}
-                className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-lg flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-12 px-6 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Download Text/CSV Backup"
             >
                 <FileDown size={20} /> <span className="hidden sm:inline">TXT</span>
@@ -398,7 +421,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
             <button 
                 onClick={handleDownloadAPKG}
                 disabled={completedItems.length === 0 || isExporting}
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
             >
             {isExporting ? (
                 <>
@@ -495,7 +518,12 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
                 {/* Inject Styles specifically for this preview container */}
                 <style>{cardCSS}</style>
                 
-                <div className="card w-full">
+                {/* 
+                   Note: In the real export, the .card class applies to the Body. 
+                   Here we use a div with class 'card' to simulate it inside the container.
+                   We add 'relative' and 'w-full' to make it behave within our preview box.
+                */}
+                <div className="card w-full relative" style={{ minHeight: '100%', height: 'auto', background: 'transparent' }}>
                     {renderPreviewContent()}
                 </div>
 

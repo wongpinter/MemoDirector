@@ -22,21 +22,43 @@ export const MajorSystemTrainer: React.FC = () => {
   };
 
   const cardCSS = `
-.card {
-  font-family: 'Segoe UI', system-ui, sans-serif;
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
   background-color: #0f172a;
+}
+
+/* Target Anki's body wrapper */
+.card {
+  font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+  background-color: #0f172a !important;
   color: #f8fafc;
   font-size: 16px;
   line-height: 1.5;
-  min-height: 400px;
+  margin: 0 !important;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh; /* Full screen */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  text-align: center;
+}
+
+/* Inner Content Container */
+.flashcard-container {
+  width: 100%;
+  max-width: 600px;
   padding: 20px;
   box-sizing: border-box;
-  border-radius: 16px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
 }
 
 /* Front */
@@ -103,15 +125,15 @@ export const MajorSystemTrainer: React.FC = () => {
   font-size: 14px;
   border: 1px solid #4338ca;
 }
-`;
+`.trim();
 
   const generateFrontHtml = (rule: MajorSystemRule) => `
-<div class="card">
+<div class="flashcard-container">
   <div class="digit">${rule.digit}</div>
 </div>`;
 
   const generateBackHtml = (rule: MajorSystemRule) => `
-<div class="card">
+<div class="flashcard-container">
   <div class="sounds-wrapper">
     <div class="sounds-label">Phonetic Sounds</div>
     <div class="sounds-val">${rule.sounds.join(' / ')}</div>
@@ -215,7 +237,7 @@ export const MajorSystemTrainer: React.FC = () => {
                 <button 
                     onClick={handleDownloadTXT}
                     disabled={isExporting}
-                    className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-lg flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                    className="h-12 px-6 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
                     title="Download Text File"
                 >
                     <FileDown size={20} /> <span className="hidden sm:inline">TXT</span>
@@ -223,7 +245,7 @@ export const MajorSystemTrainer: React.FC = () => {
                 <button 
                     onClick={handleExportAPKG}
                     disabled={isExporting}
-                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50"
+                    className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50"
                 >
                     {isExporting ? <Loader2 size={20} className="animate-spin" /> : <Package size={20} />}
                     Export Deck
@@ -345,38 +367,41 @@ export const MajorSystemTrainer: React.FC = () => {
              </div>
 
              {/* The Stage */}
-             <div className="relative h-[450px] bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center p-6">
+             <div className="relative bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center p-8 min-h-[450px] overflow-hidden">
                 <style>{cardCSS}</style>
                 <div className="w-full h-full relative preserve-3d transition-transform duration-500">
-                    {/* We just render one side based on state for simplicity in React, 
-                        though typically flip cards use CSS 3D transform. 
-                        Here we just swap content to demo the 'look'. */}
-                    
-                    {!isFlipped ? (
-                        <div className="card w-full h-full animate-in fade-in zoom-in-95 duration-300 cursor-pointer" onClick={() => setIsFlipped(true)}>
-                            <div className="digit">{activeItem.digit}</div>
-                            <div className="absolute bottom-8 text-slate-500 text-xs uppercase tracking-widest font-bold">Click to Reveal</div>
-                        </div>
-                    ) : (
-                        <div className="card w-full h-full animate-in fade-in zoom-in-95 duration-300 cursor-pointer" onClick={() => setIsFlipped(false)}>
-                             <div className="sounds-wrapper">
-                                <div className="sounds-label">Phonetic Sounds</div>
-                                <div className="sounds-val">{activeItem.sounds.join(' / ')}</div>
-                                
-                                <div className="mnemonic">"{activeItem.mnemonic}"</div>
-                                
-                                <div className="sounds-label">Example Objects</div>
-                                <div className="examples-box">
-                                    {activeItem.examples.map((ex, i) => (
-                                        <span key={i} className="example-tag">{ex}</span>
-                                    ))}
+                    {/* 
+                        Simulation wrapper:
+                        In Anki, .card is on the body.
+                        Here we wrap content in a div that mimics .card behaviors but contained.
+                    */}
+                    <div className="card w-full relative" style={{ minHeight: '100%', height: 'auto', background: 'transparent' }}>
+                        {!isFlipped ? (
+                            <div className="flashcard-container animate-in fade-in zoom-in-95 duration-300 cursor-pointer" onClick={() => setIsFlipped(true)}>
+                                <div className="digit">{activeItem.digit}</div>
+                                <div className="absolute bottom-8 text-slate-500 text-xs uppercase tracking-widest font-bold">Click to Reveal</div>
+                            </div>
+                        ) : (
+                            <div className="flashcard-container animate-in fade-in zoom-in-95 duration-300 cursor-pointer" onClick={() => setIsFlipped(false)}>
+                                <div className="sounds-wrapper">
+                                    <div className="sounds-label">Phonetic Sounds</div>
+                                    <div className="sounds-val">{activeItem.sounds.join(' / ')}</div>
+                                    
+                                    <div className="mnemonic">"{activeItem.mnemonic}"</div>
+                                    
+                                    <div className="sounds-label">Example Objects</div>
+                                    <div className="examples-box">
+                                        {activeItem.examples.map((ex, i) => (
+                                            <span key={i} className="example-tag">{ex}</span>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
                 
-                <div className="absolute bottom-4 right-4">
+                <div className="absolute bottom-4 right-4 z-10">
                     <button 
                         onClick={() => setIsFlipped(!isFlipped)}
                         className="p-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-full transition-all"
