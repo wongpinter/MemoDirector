@@ -17,16 +17,21 @@
         version: ''
       };
     </script>
-    <!-- Polyfill Buffer: specific version known to work well -->
+    <!-- Polyfill Buffer: Robust loading -->
     <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
     <script>
-      if (window.buffer) {
+      // Ensure Buffer is available globally on window
+      if (typeof window.Buffer === 'undefined' && window.buffer) {
         window.Buffer = window.buffer.Buffer;
+      }
+      if (window.Buffer) {
+        window.global.Buffer = window.Buffer;
       }
     </script>
     <!-- Export Libraries -->
     <script>
       // UMD Fix: Temporarily hide define/module/exports to force libraries to attach to window
+      // This prevents "mismatched anonymous define" errors with some CDNs
       window._oldDefine = window.define;
       window.define = undefined;
       window._oldModule = window.module;
@@ -34,9 +39,9 @@
       window._oldExports = window.exports;
       window.exports = undefined;
     </script>
-    <!-- Use jsDelivr for better stability than unpkg -->
-    <script src="https://cdn.jsdelivr.net/npm/anki-apkg-export@5.3.2/dist/anki-apkg-export.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <!-- Use unpkg for better stability with these specific libraries -->
+    <script src="https://unpkg.com/anki-apkg-export@5.3.2/dist/anki-apkg-export.js"></script>
+    <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script>
       // Restore AMD/CommonJS if they existed
       window.define = window._oldDefine;

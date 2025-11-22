@@ -7,6 +7,7 @@ export const MajorSystemTrainer: React.FC = () => {
   const [exportError, setExportError] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [showCsvHelp, setShowCsvHelp] = useState(false);
 
   const activeItem = MAJOR_SYSTEM[previewIndex];
 
@@ -124,24 +125,32 @@ export const MajorSystemTrainer: React.FC = () => {
   </div>
 </div>`;
 
-  const handleDownloadCSV = () => {
-    const header = "Digit;Front;Back\n";
+  const handleDownloadTXT = () => {
+    // Use Tab separator (standard for Anki) to avoid conflicts with CSS semicolons
+    const sep = "\t";
+    // Reordered Columns: Front HTML first, Back HTML second, then Metadata
+    const header = `Front${sep}Back${sep}Digit\n`;
+    
     const rows = MAJOR_SYSTEM.map(rule => {
-      // Inline CSS into the fields so it works reasonably well even in CSV import
-      const styleTag = `<style>${cardCSS.replace(/\n/g, '')}</style>`;
-      const front = (styleTag + generateFrontHtml(rule)).replace(/\n/g, '');
-      const back = (styleTag + generateBackHtml(rule)).replace(/\n/g, '');
-      return `${rule.digit};${front};${back}`;
+      // Inline CSS into the fields so it works reasonably well even in text import
+      // IMPORTANT: Strip newlines and tabs from HTML content to prevent breaking the TSV structure
+      const styleTag = `<style>${cardCSS.replace(/[\r\n\t]/g, ' ')}</style>`;
+      const front = (styleTag + generateFrontHtml(rule)).replace(/[\r\n\t]/g, ' ');
+      const back = (styleTag + generateBackHtml(rule)).replace(/[\r\n\t]/g, ' ');
+      
+      // ORDER IS CRITICAL: Front, Back, then other fields
+      return `${front}${sep}${back}${sep}${rule.digit}`;
     }).join("\n");
 
-    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([header + rows], { type: 'text/plain;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'major-system-rules.csv');
+    link.setAttribute('download', 'major-system-rules.txt');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setShowCsvHelp(true);
   };
 
   const handleExportAPKG = async () => {
@@ -155,10 +164,10 @@ export const MajorSystemTrainer: React.FC = () => {
       const saveAs = window.saveAs;
 
       if (!AnkiExportLib) {
-         throw new Error("Export libraries failed to load from CDN. Please check internet connection.");
+         throw new Error("AnkiExport library failed to load. Please check your internet connection and refresh.");
       }
       if (!saveAs) {
-         throw new Error("FileSaver library failed to load from CDN. Please check internet connection.");
+         throw new Error("FileSaver library failed to load. Please check your internet connection and refresh.");
       }
 
       // Handle potential default export structure
@@ -177,10 +186,13 @@ export const MajorSystemTrainer: React.FC = () => {
       saveAs(zip, 'major-system-rules.apkg');
     } catch (e: any) {
       console.error("APKG Export failed:", e);
-      setExportError(e.message || "APKG export failed. Downloading CSV backup instead.");
+      setExportError("APKG Export Failed: " + (e.message || "Unknown Error"));
       
       // Slight delay to allow UI to update before fallback download
-      setTimeout(() => handleDownloadCSV(), 1500);
+      setTimeout(() => {
+          handleDownloadTXT();
+          setExportError(prev => prev + ". Downloading Text backup instead...");
+      }, 1500);
     } finally {
       setIsExporting(false);
     }
@@ -201,12 +213,12 @@ export const MajorSystemTrainer: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
                 <button 
-                    onClick={handleDownloadCSV}
+                    onClick={handleDownloadTXT}
                     disabled={isExporting}
                     className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-lg flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-                    title="Download CSV"
+                    title="Download Text File"
                 >
-                    <FileDown size={20} /> <span className="hidden sm:inline">CSV</span>
+                    <FileDown size={20} /> <span className="hidden sm:inline">TXT</span>
                 </button>
                 <button 
                     onClick={handleExportAPKG}
@@ -220,9 +232,58 @@ export const MajorSystemTrainer: React.FC = () => {
         </div>
 
         {exportError && (
-            <div className="p-4 bg-amber-900/30 border border-amber-500/30 rounded-xl text-amber-200 flex items-center gap-3 animate-in fade-in">
-                <AlertTriangle size={20} /> 
-                <span className="text-sm">{exportError}</span>
+            <div className="p-4 bg-amber-900/30 border border-amber-500/30 rounded-xl text-amber-200 flex flex-col gap-2 animate-in fade-in">
+                <div className="flex items-center gap-3">
+                    <AlertTriangle size={20} /> 
+                    <span className="text-sm font-bold">{exportError}</span>
+                </div>
+                <div className="text-xs text-amber-300/80 pl-8">
+                    Please import the Text file manually if the APKG file was not generated.
+                </div>
+            </div>
+        )}
+
+        {showCsvHelp && (
+            <div className="bg-slate-800 border border-indigo-500/30 rounded-xl p-6 animate-in slide-in-from-top-2">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <BookOpen className="text-indigo-400" /> How to Import Text to Anki
+                    </h3>
+                    <button onClick={() => setShowCsvHelp(false)} className="text-xs text-slate-500 hover:text-white">Dismiss</button>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-4 text-sm text-slate-300">
+                        <p>If the automatic .APKG file fails, use the Text file with Anki's built-in importer:</p>
+                        <ol className="list-decimal list-inside space-y-2 marker:text-indigo-500 marker:font-bold">
+                            <li>Open Anki on your desktop.</li>
+                            <li>Go to <strong>File</strong> &rarr; <strong>Import...</strong></li>
+                            <li>Select the <code className="bg-slate-900 px-1 py-0.5 rounded text-indigo-300">major-system-rules.txt</code> you just downloaded.</li>
+                            <li className="bg-indigo-900/20 p-1 rounded border border-indigo-500/30">
+                                Anki should automatically detect fields separated by <strong>Tabs</strong>.
+                            </li>
+                            <li>Ensure <strong>"Allow HTML in fields"</strong> is <span className="text-emerald-400 font-bold">CHECKED</span>.</li>
+                        </ol>
+                    </div>
+                    <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 text-xs font-mono space-y-2">
+                        <p className="text-slate-400 uppercase font-bold tracking-wider border-b border-slate-800 pb-2 mb-2">New Field Mapping</p>
+                        <div className="flex justify-between items-center bg-indigo-900/20 p-1 rounded -mx-1">
+                            <span className="text-indigo-300 font-bold">Field 1 (Front HTML)</span>
+                            <span className="text-indigo-500">&rarr;</span>
+                            <span className="text-indigo-300 font-bold">Front</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-indigo-900/20 p-1 rounded -mx-1">
+                            <span className="text-indigo-300 font-bold">Field 2 (Back HTML)</span>
+                            <span className="text-indigo-500">&rarr;</span>
+                            <span className="text-indigo-300 font-bold">Back</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-slate-500">Field 3 (Digit)</span>
+                            <span className="text-slate-600">&rarr;</span>
+                            <span className="text-slate-300">Map to "Tags" or Ignore</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         )}
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PAOItem } from '../types';
 import { getPhoneticsForNumber } from '../constants';
-import { Download, Copy, FileText, ChevronLeft, ChevronRight, Rotate3D, Package, Loader2, FileDown, AlertTriangle } from 'lucide-react';
+import { Download, Copy, FileText, ChevronLeft, ChevronRight, Rotate3D, Package, Loader2, FileDown, AlertTriangle, Info, BookOpen } from 'lucide-react';
 
 interface AnkiExportProps {
   items: PAOItem[];
@@ -13,6 +13,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Demo item for when no items are completed yet
   const demoItem: PAOItem = {
@@ -243,23 +244,40 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
 </div>`;
   };
 
-  const handleDownloadCSV = () => {
-    const header = "Number;Person;Action;Object;Front;Back\n";
+  const handleDownloadTXT = () => {
+    // Use Tab separator (Standard for Anki) to avoid conflicts with CSS semicolons and HTML attributes
+    const sep = "\t";
+    // Reordered Columns: Front HTML and Back HTML first, then metadata
+    // This ensures Anki's default mapping (Field 1->Front, Field 2->Back) works out of the box.
+    const header = `Front${sep}Back${sep}Number${sep}Person${sep}Action${sep}Object\n`;
+    
     const rows = completedItems.map(item => {
       const num = item.number.toString().padStart(2, '0');
-      const front = generateFrontHtml(item).replace(/\n/g, '');
-      const back = generateBackHtml(item).replace(/\n/g, '');
-      return `${num};${item.person};${item.action};${item.object};${front};${back}`;
+      
+      // Prepare CSS - strip newlines/tabs for TSV safety
+      const styleTag = `<style>${cardCSS.replace(/[\r\n\t]/g, ' ')}</style>`;
+      
+      // Prepare Content - strip newlines/tabs for TSV safety
+      const frontHtml = generateFrontHtml(item).replace(/[\r\n\t]/g, ' ');
+      const backHtml = generateBackHtml(item).replace(/[\r\n\t]/g, ' ');
+      
+      // Combined (Inject CSS into the fields for the text export)
+      const front = styleTag + frontHtml;
+      const back = styleTag + backHtml;
+
+      // ORDER IS CRITICAL: Front, Back, then other fields
+      return `${front}${sep}${back}${sep}${num}${sep}${item.person}${sep}${item.action}${sep}${item.object}`;
     }).join("\n");
 
-    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([header + rows], { type: 'text/plain;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'mindpalace_pao_fallback.csv');
+    link.setAttribute('download', 'mindpalace_pao_deck.txt');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setShowTutorial(true); // Auto show tutorial on download
   };
 
   const handleDownloadAPKG = async () => {
@@ -274,7 +292,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
       const saveAs = window.saveAs;
 
       if (!AnkiExportLib) {
-        throw new Error("Export libraries failed to load from CDN. Please check internet connection.");
+        throw new Error("AnkiExport library failed to load from CDN. Please check internet connection.");
       }
       if (!saveAs) {
         throw new Error("FileSaver library failed to load from CDN. Please check internet connection.");
@@ -298,9 +316,12 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
       saveAs(zip, 'mindpalace-pao.apkg');
     } catch (error: any) {
       console.error("APKG generation failed:", error);
-      setExportError(error.message || "APKG failed. Downloading CSV instead...");
-      // Automatically fallback to CSV after a delay
-      setTimeout(() => handleDownloadCSV(), 1500);
+      setExportError("APKG Generation Failed: " + (error.message || "Unknown error"));
+      // Automatically fallback to TXT after a delay
+      setTimeout(() => {
+          handleDownloadTXT();
+          setExportError(prev => prev + ". Downloading Text backup instead...");
+      }, 1500);
     } finally {
       setIsExporting(false);
     }
@@ -350,7 +371,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       
       {/* Top Section: Title & Download */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl">
         <div>
           <h2 className="text-2xl font-bold text-white mb-1">Anki Export</h2>
           <p className="text-slate-400 text-sm">
@@ -360,14 +381,17 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-            {/* Secondary CSV Button */}
+            {/* Secondary TXT Button */}
             <button 
-                onClick={handleDownloadCSV}
+                onClick={() => {
+                    handleDownloadTXT();
+                    setShowTutorial(true);
+                }}
                 disabled={completedItems.length === 0 || isExporting}
                 className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-lg flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Download CSV Backup"
+                title="Download Text/CSV Backup"
             >
-                <FileDown size={20} /> <span className="hidden sm:inline">CSV</span>
+                <FileDown size={20} /> <span className="hidden sm:inline">TXT</span>
             </button>
 
             {/* Primary APKG Button */}
@@ -390,10 +414,66 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
       </div>
 
       {exportError && (
-        <div className="p-4 bg-amber-900/30 border border-amber-500/30 rounded-xl text-amber-200 flex items-center gap-3 animate-in fade-in">
-            <AlertTriangle size={20} />
-            <span className="text-sm font-semibold">{exportError}</span>
+        <div className="p-4 bg-amber-900/30 border border-amber-500/30 rounded-xl text-amber-200 flex items-start gap-3 animate-in fade-in">
+            <AlertTriangle size={20} className="mt-0.5 shrink-0" />
+            <div className="flex-1">
+                <p className="font-bold text-sm">{exportError}</p>
+                <p className="text-xs mt-1 text-amber-300/80">
+                    Browser libraries sometimes fail. We automatically downloaded a Text file for you. 
+                    See the tutorial below on how to import it.
+                </p>
+            </div>
         </div>
+      )}
+
+      {/* Tutorial Section (Collapsible or always visible if toggled) */}
+      {showTutorial && (
+          <div className="bg-slate-800 border border-indigo-500/30 rounded-xl p-6 animate-in slide-in-from-top-2">
+             <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <BookOpen className="text-indigo-400" /> How to Import Text to Anki
+                </h3>
+                <button onClick={() => setShowTutorial(false)} className="text-xs text-slate-500 hover:text-white">Dismiss</button>
+             </div>
+             
+             <div className="grid md:grid-cols-2 gap-8">
+                 <div className="space-y-4 text-sm text-slate-300">
+                     <p>If the automatic .APKG file fails, use the Text file with Anki's built-in importer:</p>
+                     <ol className="list-decimal list-inside space-y-2 marker:text-indigo-500 marker:font-bold">
+                         <li>Open Anki on your desktop.</li>
+                         <li>Go to <strong>File</strong> &rarr; <strong>Import...</strong></li>
+                         <li>Select the <code className="bg-slate-900 px-1 py-0.5 rounded text-indigo-300">mindpalace_pao_deck.txt</code> you just downloaded.</li>
+                         <li className="bg-indigo-900/20 p-1 rounded border border-indigo-500/30">
+                             Anki should automatically set the <strong>Field Separator</strong> to <strong>Tab</strong>.
+                         </li>
+                         <li>In the import window, ensure <strong>"Allow HTML in fields"</strong> is <span className="text-emerald-400 font-bold">CHECKED</span>.</li>
+                     </ol>
+                 </div>
+                 <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 text-xs font-mono space-y-2">
+                     <p className="text-slate-400 uppercase font-bold tracking-wider border-b border-slate-800 pb-2 mb-2">New Field Mapping</p>
+                     <div className="flex justify-between items-center bg-indigo-900/20 p-1 rounded -mx-1">
+                         <span className="text-indigo-300 font-bold">Field 1 (Front HTML)</span>
+                         <span className="text-indigo-500">&rarr;</span>
+                         <span className="text-indigo-300 font-bold">Front</span>
+                     </div>
+                     <div className="flex justify-between items-center bg-indigo-900/20 p-1 rounded -mx-1">
+                         <span className="text-indigo-300 font-bold">Field 2 (Back HTML)</span>
+                         <span className="text-indigo-500">&rarr;</span>
+                         <span className="text-indigo-300 font-bold">Back</span>
+                     </div>
+                     <div className="flex justify-between items-center">
+                         <span className="text-slate-500">Field 3 (Number)</span>
+                         <span className="text-slate-600">&rarr;</span>
+                         <span className="text-slate-300">Map to "Tags" or Ignore</span>
+                     </div>
+                     <div className="flex justify-between items-center">
+                         <span className="text-slate-500">Fields 4-6</span>
+                         <span className="text-slate-600">&rarr;</span>
+                         <span className="text-slate-300">Ignore (Metadata)</span>
+                     </div>
+                 </div>
+             </div>
+          </div>
       )}
 
       {/* Preview Section */}
@@ -459,7 +539,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
                         <strong>Double-click</strong> the file. Anki should open and import it automatically.
                     </li>
                     <li className="pl-2">
-                        <span className="text-slate-400 italic">Alternatively, in Anki: File &rarr; Import &rarr; Select the file.</span>
+                        <span className="text-slate-400 italic">If APKG fails, use the <button onClick={() => setShowTutorial(!showTutorial)} className="text-indigo-400 underline">TXT Method</button>.</span>
                     </li>
                 </ol>
             </div>
