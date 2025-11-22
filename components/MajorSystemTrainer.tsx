@@ -1,0 +1,329 @@
+import React, { useState } from 'react';
+import { MAJOR_SYSTEM, MajorSystemRule } from '../types';
+import { BookOpen, Package, Loader2, ChevronLeft, ChevronRight, Rotate3D, AlertTriangle, GraduationCap, FileDown } from 'lucide-react';
+
+export const MajorSystemTrainer: React.FC = () => {
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  const activeItem = MAJOR_SYSTEM[previewIndex];
+
+  const handleNext = () => {
+    setPreviewIndex((prev) => (prev + 1) % MAJOR_SYSTEM.length);
+    setIsFlipped(false);
+  };
+
+  const handlePrev = () => {
+    setPreviewIndex((prev) => (prev - 1 + MAJOR_SYSTEM.length) % MAJOR_SYSTEM.length);
+    setIsFlipped(false);
+  };
+
+  const cardCSS = `
+.card {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background-color: #0f172a;
+  color: #f8fafc;
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  text-align: center;
+}
+
+/* Front */
+.digit {
+  font-size: 140px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #34d399, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #34d399;
+  margin: 0;
+  line-height: 1;
+  filter: drop-shadow(0 4px 10px rgba(52, 211, 153, 0.3));
+}
+
+/* Back */
+.sounds-wrapper {
+  background: #1e293b;
+  border: 2px solid #334155;
+  padding: 20px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.sounds-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #94a3b8;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.sounds-val {
+  font-size: 32px;
+  font-weight: 800;
+  color: #34d399;
+  margin-bottom: 16px;
+}
+
+.mnemonic {
+  font-style: italic;
+  color: #e2e8f0;
+  font-size: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #475569;
+}
+
+.examples-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.example-tag {
+  background: #0f172a;
+  color: #a5b4fc;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #4338ca;
+}
+`;
+
+  const generateFrontHtml = (rule: MajorSystemRule) => `
+<div class="card">
+  <div class="digit">${rule.digit}</div>
+</div>`;
+
+  const generateBackHtml = (rule: MajorSystemRule) => `
+<div class="card">
+  <div class="sounds-wrapper">
+    <div class="sounds-label">Phonetic Sounds</div>
+    <div class="sounds-val">${rule.sounds.join(' / ')}</div>
+    
+    <div class="mnemonic">"${rule.mnemonic}"</div>
+    
+    <div class="sounds-label">Example Objects</div>
+    <div class="examples-box">
+        ${rule.examples.map(ex => `<span class="example-tag">${ex}</span>`).join('')}
+    </div>
+  </div>
+</div>`;
+
+  const handleDownloadCSV = () => {
+    const header = "Digit;Front;Back\n";
+    const rows = MAJOR_SYSTEM.map(rule => {
+      // Inline CSS into the fields so it works reasonably well even in CSV import
+      const styleTag = `<style>${cardCSS.replace(/\n/g, '')}</style>`;
+      const front = (styleTag + generateFrontHtml(rule)).replace(/\n/g, '');
+      const back = (styleTag + generateBackHtml(rule)).replace(/\n/g, '');
+      return `${rule.digit};${front};${back}`;
+    }).join("\n");
+
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'major-system-rules.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportAPKG = async () => {
+    setIsExporting(true);
+    setExportError(null);
+
+    try {
+      // @ts-ignore
+      const AnkiExportLib = window.AnkiExport;
+      // @ts-ignore
+      const saveAs = window.saveAs;
+
+      if (!AnkiExportLib || !saveAs) {
+        throw new Error("Export libraries failed to load from CDN. Please check internet connection.");
+      }
+
+      // Handle potential default export structure
+      const AnkiGen = AnkiExportLib.default || AnkiExportLib;
+
+      const apkg = new AnkiGen('Major System Rules (0-9)');
+      const styleTag = `<style>${cardCSS}</style>`;
+
+      for (const rule of MAJOR_SYSTEM) {
+        const front = styleTag + generateFrontHtml(rule);
+        const back = styleTag + generateBackHtml(rule);
+        apkg.addCard(front, back);
+      }
+
+      const zip = await apkg.save();
+      saveAs(zip, 'major-system-rules.apkg');
+    } catch (e: any) {
+      console.error("APKG Export failed:", e);
+      setExportError("APKG export failed. Downloading CSV backup instead.");
+      
+      // Slight delay to allow UI to update before fallback download
+      setTimeout(() => handleDownloadCSV(), 1500);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 max-w-4xl mx-auto">
+        
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-center md:text-left">
+            <div>
+                <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 justify-center md:justify-start">
+                    <GraduationCap className="text-indigo-400" /> Major System Training
+                </h2>
+                <p className="text-slate-400 max-w-xl">
+                    Master the phonetic code that underpins the entire memory palace. 
+                    Learn to convert digits 0-9 into consonant sounds.
+                </p>
+            </div>
+            <div className="flex items-center gap-2">
+                <button 
+                    onClick={handleDownloadCSV}
+                    disabled={isExporting}
+                    className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-lg flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                    title="Download CSV"
+                >
+                    <FileDown size={20} /> <span className="hidden sm:inline">CSV</span>
+                </button>
+                <button 
+                    onClick={handleExportAPKG}
+                    disabled={isExporting}
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50"
+                >
+                    {isExporting ? <Loader2 size={20} className="animate-spin" /> : <Package size={20} />}
+                    Export Deck
+                </button>
+            </div>
+        </div>
+
+        {exportError && (
+            <div className="p-4 bg-amber-900/30 border border-amber-500/30 rounded-xl text-amber-200 flex items-center gap-3 animate-in fade-in">
+                <AlertTriangle size={20} /> 
+                <span className="text-sm">{exportError}</span>
+            </div>
+        )}
+
+        {/* Reference Table */}
+        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+             <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-900 border-b border-slate-700 text-xs uppercase text-slate-400 font-bold tracking-wider">
+                            <th className="p-4">Digit</th>
+                            <th className="p-4">Sounds</th>
+                            <th className="p-4 hidden sm:table-cell">Mnemonic</th>
+                            <th className="p-4">Examples</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50 text-sm">
+                        {MAJOR_SYSTEM.map((rule) => (
+                            <tr key={rule.digit} className="hover:bg-slate-800/50 transition-colors">
+                                <td className="p-4 font-mono font-black text-2xl text-indigo-400">{rule.digit}</td>
+                                <td className="p-4 font-bold text-white">{rule.sounds.join(', ')}</td>
+                                <td className="p-4 text-slate-400 italic hidden sm:table-cell">{rule.mnemonic}</td>
+                                <td className="p-4">
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {rule.examples.map((ex, i) => (
+                                            <span key={i} className="px-2 py-1 bg-slate-700 rounded text-slate-200 text-xs border border-slate-600">
+                                                {ex}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+             </div>
+        </div>
+
+        {/* Card Preview Area */}
+        <div className="grid md:grid-cols-2 gap-8 pt-8 border-t border-slate-800">
+             <div className="space-y-4">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <BookOpen size={20} className="text-emerald-400" /> Flashcard Preview
+                </h3>
+                <p className="text-slate-400 text-sm">
+                    This is how the cards will look in Anki. Practice flipping them to verify you know the sounds for each digit.
+                </p>
+                
+                <div className="flex items-center justify-center gap-4 pt-4">
+                    <button onClick={handlePrev} className="p-3 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                        <ChevronLeft size={24} />
+                    </button>
+                    <span className="font-mono font-bold text-lg min-w-[3rem] text-center">
+                        {activeItem.digit}
+                    </span>
+                    <button onClick={handleNext} className="p-3 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                        <ChevronRight size={24} />
+                    </button>
+                </div>
+             </div>
+
+             {/* The Stage */}
+             <div className="relative h-[450px] bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center p-6">
+                <style>{cardCSS}</style>
+                <div className="w-full h-full relative preserve-3d transition-transform duration-500">
+                    {/* We just render one side based on state for simplicity in React, 
+                        though typically flip cards use CSS 3D transform. 
+                        Here we just swap content to demo the 'look'. */}
+                    
+                    {!isFlipped ? (
+                        <div className="card w-full h-full animate-in fade-in zoom-in-95 duration-300 cursor-pointer" onClick={() => setIsFlipped(true)}>
+                            <div className="digit">{activeItem.digit}</div>
+                            <div className="absolute bottom-8 text-slate-500 text-xs uppercase tracking-widest font-bold">Click to Reveal</div>
+                        </div>
+                    ) : (
+                        <div className="card w-full h-full animate-in fade-in zoom-in-95 duration-300 cursor-pointer" onClick={() => setIsFlipped(false)}>
+                             <div className="sounds-wrapper">
+                                <div className="sounds-label">Phonetic Sounds</div>
+                                <div className="sounds-val">{activeItem.sounds.join(' / ')}</div>
+                                
+                                <div className="mnemonic">"{activeItem.mnemonic}"</div>
+                                
+                                <div className="sounds-label">Example Objects</div>
+                                <div className="examples-box">
+                                    {activeItem.examples.map((ex, i) => (
+                                        <span key={i} className="example-tag">{ex}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                
+                <div className="absolute bottom-4 right-4">
+                    <button 
+                        onClick={() => setIsFlipped(!isFlipped)}
+                        className="p-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-full transition-all"
+                        title="Flip Card"
+                    >
+                        <Rotate3D size={20} className={isFlipped ? 'rotate-180' : ''} />
+                    </button>
+                </div>
+             </div>
+        </div>
+
+    </div>
+  );
+};
