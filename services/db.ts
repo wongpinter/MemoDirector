@@ -89,7 +89,10 @@ export const savePAOList = async (items: PAOItem[]) => {
   if (isFirebaseAvailable && db) {
     try {
       const docRef = doc(db, "users", "default_user", "pao", "list");
-      await setDoc(docRef, { items, lastUpdated: new Date() });
+      await setDoc(docRef, { 
+        items, 
+        lastUpdated: Date.now() // Use timestamp instead of Date object
+      });
       console.log("✅ Saved to Firebase");
     } catch (e) {
       console.error("❌ Error saving to Firebase", e);

@@ -65,10 +65,17 @@ export function usePAOData() {
 
   // Start periodic sync on mount
   useEffect(() => {
-    const cleanup = startPeriodicSync((status) => {
+    const cleanup = startPeriodicSync(async (status, merged) => {
       if (status === 'syncing') {
         setSyncStatus('syncing');
       } else if (status === 'synced') {
+        // If data was merged, reload from LocalStorage to get the merged result
+        if (merged) {
+          const mergedData = await loadPAOData();
+          setItems(mergedData);
+          console.log('🔄 Reloaded merged data from periodic sync');
+        }
+        
         setSyncStatus('saved');
         setLastSyncTime(Date.now());
         setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
@@ -87,6 +94,13 @@ export function usePAOData() {
     const result = await syncToFirebase();
     
     if (result.success) {
+      // If data was merged, reload from LocalStorage to get the merged result
+      if (result.merged) {
+        const mergedData = await loadPAOData();
+        setItems(mergedData);
+        console.log('🔄 Reloaded merged data');
+      }
+      
       setSyncStatus('saved');
       setLastSyncTime(Date.now());
       setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
@@ -99,9 +113,15 @@ export function usePAOData() {
   }, []);
 
   const updateItem = (updatedItem: PAOItem) => {
+    // Add timestamp to track when this item was last modified
+    const itemWithTimestamp = {
+      ...updatedItem,
+      lastModified: Date.now()
+    };
+    
     setItems(prev => 
       prev.map(item => 
-        item.number === updatedItem.number ? updatedItem : item
+        item.number === itemWithTimestamp.number ? itemWithTimestamp : item
       )
     );
   };

@@ -69,9 +69,44 @@ export function getLastSyncTime(): number | null {
 }
 
 /**
- * Sync queued items to Firebase
+ * Merge items with conflict resolution based on lastModified timestamp
  */
-export async function syncToFirebase(): Promise<{ success: boolean; error?: string }> {
+function mergeItems(localItems: PAOItem[], remoteItems: PAOItem[]): PAOItem[] {
+  const merged: PAOItem[] = [];
+  
+  for (let i = 0; i < Math.max(localItems.length, remoteItems.length); i++) {
+    const local = localItems[i];
+    const remote = remoteItems[i];
+    
+    if (!local && remote) {
+      merged.push(remote);
+    } else if (local && !remote) {
+      merged.push(local);
+    } else if (local && remote) {
+      // Both exist - use the one with the latest timestamp
+      const localTime = local.lastModified || 0;
+      const remoteTime = remote.lastModified || 0;
+      
+      if (localTime > remoteTime) {
+        merged.push(local);
+        console.log(`🔄 Item ${local.number}: Using local (newer)`);
+      } else if (remoteTime > localTime) {
+        merged.push(remote);
+        console.log(`🔄 Item ${remote.number}: Using remote (newer)`);
+      } else {
+        // Same timestamp or both missing - prefer local
+        merged.push(local);
+      }
+    }
+  }
+  
+  return merged;
+}
+
+/**
+ * Sync queued items to Firebase with conflict resolution
+ */
+export async function syncToFirebase(): Promise<{ success: boolean; error?: string; merged?: boolean }> {
   try {
     const queueData = localStorage.getItem(SYNC_QUEUE_KEY);
     
@@ -80,16 +115,39 @@ export async function syncToFirebase(): Promise<{ success: boolean; error?: stri
     }
     
     const queueItem: SyncQueueItem = JSON.parse(queueData);
+    const localItems = queueItem.items;
     
-    // Save to Firebase
-    await saveToFirebase(queueItem.items);
+    // Fetch current Firebase data to check for conflicts
+    let remoteItems: PAOItem[] = [];
+    try {
+      remoteItems = await loadPAOList();
+    } catch (e) {
+      console.log('ℹ️ No remote data found, proceeding with local data');
+    }
+    
+    // Merge with conflict resolution
+    const mergedItems = remoteItems.length > 0 
+      ? mergeItems(localItems, remoteItems)
+      : localItems;
+    
+    const wasMerged = remoteItems.length > 0 && 
+      JSON.stringify(mergedItems) !== JSON.stringify(localItems);
+    
+    // Save merged result to Firebase
+    await saveToFirebase(mergedItems);
+    
+    // If data was merged, update LocalStorage with the merged result
+    if (wasMerged) {
+      console.log('🔄 Data merged from remote, updating LocalStorage');
+      localStorage.setItem('pao_data', JSON.stringify(mergedItems));
+    }
     
     // Clear queue and update last sync time
     localStorage.removeItem(SYNC_QUEUE_KEY);
     localStorage.setItem(LAST_SYNC_KEY, Date.now().toString());
     
     console.log('✅ Synced to Firebase');
-    return { success: true };
+    return { success: true, merged: wasMerged };
   } catch (error) {
     console.error('❌ Failed to sync to Firebase:', error);
     return { 
@@ -102,7 +160,7 @@ export async function syncToFirebase(): Promise<{ success: boolean; error?: stri
 /**
  * Start periodic sync (call this once on app init)
  */
-export function startPeriodicSync(onSyncStatusChange?: (status: 'syncing' | 'synced' | 'error') => void): () => void {
+export function startPeriodicSync(onSyncStatusChange?: (status: 'syncing' | 'synced' | 'error', merged?: boolean) => void): () => void {
   const intervalId = setInterval(async () => {
     if (hasPendingSync()) {
       console.log('🔄 Starting periodic sync...');
@@ -111,7 +169,7 @@ export function startPeriodicSync(onSyncStatusChange?: (status: 'syncing' | 'syn
       const result = await syncToFirebase();
       
       if (result.success) {
-        onSyncStatusChange?.('synced');
+        onSyncStatusChange?.('synced', result.merged);
       } else {
         onSyncStatusChange?.('error');
       }
@@ -123,7 +181,7 @@ export function startPeriodicSync(onSyncStatusChange?: (status: 'syncing' | 'syn
 }
 
 /**
- * Load data with LocalStorage-first strategy
+ * Load data with LocalStorage-first strategy and conflict resolution
  */
 export async function loadPAOData(): Promise<PAOItem[]> {
   // 1. Try LocalStorage first (instant)
@@ -136,12 +194,18 @@ export async function loadPAOData(): Promise<PAOItem[]> {
     try {
       const firebaseData = await loadPAOList();
       
-      // If Firebase has data, check if it's newer
-      const lastSync = getLastSyncTime();
+      // If Firebase has data, merge with conflict resolution
       if (firebaseData && firebaseData.length > 0) {
-        // For now, we trust LocalStorage as source of truth
-        // In production, you'd compare timestamps
-        console.log('ℹ️ Firebase data available but using LocalStorage');
+        const mergedData = mergeItems(localData, firebaseData);
+        
+        // Check if merge resulted in changes
+        if (JSON.stringify(mergedData) !== JSON.stringify(localData)) {
+          console.log('🔄 Merged newer data from Firebase');
+          saveToLocalStorage(mergedData);
+          return mergedData;
+        }
+        
+        console.log('ℹ️ Local data is up to date');
       }
     } catch (error) {
       console.log('ℹ️ Firebase not available, using LocalStorage');

@@ -10,6 +10,7 @@ export interface PAOItem {
   videoUrl?: string;
   notes?: string;
   completed: boolean;
+  lastModified?: number; // Timestamp for conflict resolution
 }
 
 export interface Suggestion {
