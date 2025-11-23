@@ -515,7 +515,7 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
                         value={scene}
                         onChange={(e) => setScene(e.target.value)}
                         placeholder={person && action ? `${person} doing ${action}... (describe the scene)` : "Describe the memorable scene..."}
-                        className="w-full bg-slate-800 border-slate-700 border text-slate-100 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all min-h-[80px] text-sm pb-6"
+                        className="w-full bg-slate-800 border-slate-700 border text-slate-100 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all min-h-[120px] text-sm pb-6"
                     />
                     <div className={`absolute bottom-2 right-3 text-[10px] font-mono transition-colors ${scene.length > CHAR_LIMIT ? 'text-amber-400 font-bold' : 'text-slate-500'}`}>
                         {scene.length} / {CHAR_LIMIT}
@@ -525,7 +525,7 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
                 {/* Tip for Sensory Details */}
                 <div className="flex justify-between items-start mt-1">
                     <p className="text-[10px] text-slate-500 pl-1">
-                        <span className="text-indigo-400 font-bold">Tip:</span> Use vivid <span className="text-slate-300">smells, sounds, and textures</span>. Trigger emotions like <span className="text-slate-300">disgust, anger, or humor</span>.
+                        <span className="text-indigo-400 font-bold">Tip:</span> Be descriptive. Add <span className="text-slate-300">sensory details</span> (look, sound, feel, smell). Emphasize the <span className="text-slate-300">action and object</span>. Make it emotional.
                     </p>
                     {scene.length > CHAR_LIMIT && (
                         <p className="text-[10px] text-amber-400/80 animate-in fade-in">

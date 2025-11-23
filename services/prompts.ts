@@ -204,33 +204,31 @@ ${outputSchema}`;
  * Generate scene description prompt
  */
 export const getSceneDescriptionPrompt = (params: ScenePromptParams): string => {
-  return `Create a memorable scene description using everyday language.
+  return `Create a memorable scene using everyday words. Be descriptive and vivid.
 
-SCENE ELEMENTS:
+SCENE:
 Person: ${params.person}
 Action: ${params.action}
 Object: ${params.object}
 
-WRITING STYLE - Choose ONE level:
+MAKE IT VIVID & EMOTIONAL:
+Write a scene that makes people FEEL something through their senses.
 
-LEVEL 1 - Simple & Direct:
-Focus on what's happening. Use everyday words.
-Example: "Tony grabs the wrench and twists the rusty bolt. Metal scrapes against metal with a harsh screech."
+Focus on the ACTION and OBJECT - they are the memory anchors.
 
-LEVEL 2 - Vivid & Sensory:
-Add sensory details to the action and object.
-Example: "Tony grips the cold, oil-stained wrench and cranks the corroded bolt. The metal groans and flakes of rust fall like orange snow."
+Add sensory details:
+- What does it look like? (colors, size, movement)
+- What does it sound like? (loud, quiet, sharp, soft)
+- What does it feel like? (rough, smooth, hot, cold, wet, dry)
+- What does it smell like? (strong, faint, good, bad)
 
-LEVEL 3 - Emotional & Intense:
-Make the action and object trigger strong feelings.
-Example: "Tony wrestles with the massive wrench, muscles straining as he attacks the stubborn bolt. The tool slips, scraping his knuckles raw against the jagged metal."
+Make it emotional:
+- Exciting: fast, intense, powerful
+- Funny: weird, silly, unexpected
+- Gross: messy, slimy, smelly
+- Scary: dark, dangerous, creepy
 
-REQUIREMENTS:
-- Emphasize the ACTION and OBJECT (they're the memory anchors)
-- Add ONE sensory detail: sound, smell, texture, or visual
-- Use present tense
-- Maximum 50 words
-- Use everyday language, not fancy words
+Use everyday words. Be descriptive. Maximum 60 words.
 
 Write the scene:`;
 };
