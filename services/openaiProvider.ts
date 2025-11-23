@@ -14,6 +14,7 @@ import {
   PAOPromptParams,
   ScenePromptParams
 } from "./prompts";
+import { fetchWithTimeout, DEFAULT_LLM_TIMEOUT } from "./llmUtils";
 
 export class OpenAIProvider implements ILLMProvider {
   private apiKey: string;
@@ -27,18 +28,22 @@ export class OpenAIProvider implements ILLMProvider {
   }
 
   private async makeRequest(messages: Array<{role: string, content: string}>, jsonMode: boolean = false): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
+    const response = await fetchWithTimeout(
+      `${this.baseUrl}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages,
+          ...(jsonMode && { response_format: { type: 'json_object' } })
+        })
       },
-      body: JSON.stringify({
-        model: this.model,
-        messages,
-        ...(jsonMode && { response_format: { type: 'json_object' } })
-      })
-    });
+      DEFAULT_LLM_TIMEOUT
+    );
 
     if (!response.ok) {
       const error = await response.text();

@@ -4,6 +4,7 @@
  */
 
 import { OpenAIProvider } from "./openaiProvider";
+import { fetchWithTimeout, DEFAULT_LLM_TIMEOUT } from "./llmUtils";
 
 export class OpenRouterProvider extends OpenAIProvider {
   constructor(apiKey: string, model?: string) {
@@ -12,20 +13,24 @@ export class OpenRouterProvider extends OpenAIProvider {
   }
 
   protected async makeRequest(messages: Array<{role: string, content: string}>, jsonMode: boolean = false): Promise<string> {
-    const response = await fetch(`${(this as any).baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(this as any).apiKey}`,
-        'HTTP-Referer': window.location.origin,
-        'X-Title': 'MemoDirector'
+    const response = await fetchWithTimeout(
+      `${(this as any).baseUrl}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(this as any).apiKey}`,
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'MemoDirector'
+        },
+        body: JSON.stringify({
+          model: (this as any).model,
+          messages,
+          ...(jsonMode && { response_format: { type: 'json_object' } })
+        })
       },
-      body: JSON.stringify({
-        model: (this as any).model,
-        messages,
-        ...(jsonMode && { response_format: { type: 'json_object' } })
-      })
-    });
+      DEFAULT_LLM_TIMEOUT
+    );
 
     if (!response.ok) {
       const error = await response.text();

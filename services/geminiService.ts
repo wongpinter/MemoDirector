@@ -12,6 +12,7 @@ import {
   PAOPromptParams,
   ScenePromptParams
 } from "./prompts";
+import { withTimeout, DEFAULT_LLM_TIMEOUT, IMAGE_GENERATION_TIMEOUT, VIDEO_GENERATION_TIMEOUT } from "./llmUtils";
 
 /**
  * Gemini LLM Provider Implementation
@@ -78,14 +79,18 @@ class GeminiProvider implements ILLMProvider {
 
     console.log('📤 [Gemini] PAO Prompt:\n', prompt);
 
-    const response = await ai.models.generateContent({
-      model: this.model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: SUGGESTION_SCHEMA
-      }
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: SUGGESTION_SCHEMA
+        }
+      }),
+      DEFAULT_LLM_TIMEOUT,
+      'Gemini API request timed out. Please try again.'
+    );
 
     if (!response.text) return [];
 
@@ -112,10 +117,14 @@ class GeminiProvider implements ILLMProvider {
 
     console.log('📤 [Gemini] Scene Prompt:\n', prompt);
 
-    const response = await ai.models.generateContent({
-      model: this.model,
-      contents: prompt
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: this.model,
+        contents: prompt
+      }),
+      DEFAULT_LLM_TIMEOUT,
+      'Gemini scene generation timed out. Please try again.'
+    );
 
     return response.text?.trim() || `${person} is ${action} with ${object}.`;
   }
@@ -126,17 +135,21 @@ class GeminiProvider implements ILLMProvider {
     const sanitizedScene = sanitizeForAIPrompt(sceneDescription);
     const prompt = getImageGenerationPrompt(sanitizedScene);
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [{ text: prompt }]
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: "1:1"
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+          parts: [{ text: prompt }]
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: "1:1"
+          }
         }
-      }
-    });
+      }),
+      IMAGE_GENERATION_TIMEOUT,
+      'Image generation timed out. Please try again.'
+    );
 
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
