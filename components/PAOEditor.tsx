@@ -90,7 +90,7 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
   };
 
   const handleGenerate = async () => {
-    if (!process.env.API_KEY) {
+    if (!import.meta.env.VITE_GEMINI_API_KEY) {
         setError("API Key missing in env variables. Suggestions unavailable in this demo.");
         return;
     }
@@ -136,7 +136,7 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
          setError("Fill in Person, Action, and Object first.");
          return;
      }
-     if (!process.env.API_KEY) {
+     if (!import.meta.env.VITE_GEMINI_API_KEY) {
         setScene(`${person} is ${action} with ${object}.`);
         return;
      }

@@ -237,7 +237,7 @@ export const generateMemoryVideo = async (sceneDescription: string): Promise<{bl
     const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
     if (!videoUri) throw new Error("No video URI returned");
 
-    const apiKey = process.env.API_KEY;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     const response = await fetch(`${videoUri}&key=${apiKey}`);
     if (!response.ok) throw new Error("Failed to download video");
     
