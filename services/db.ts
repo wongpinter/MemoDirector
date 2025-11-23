@@ -85,17 +85,18 @@ export const loadPAOList = async (): Promise<PAOItem[]> => {
 };
 
 export const savePAOList = async (items: PAOItem[]) => {
-  // 1. Save Local (Always save local for speed/offline)
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
-
-  // 2. Sync Firebase
+  // Only sync to Firebase (LocalStorage is handled by syncQueue)
   if (isFirebaseAvailable && db) {
     try {
       const docRef = doc(db, "users", "default_user", "pao", "list");
       await setDoc(docRef, { items, lastUpdated: new Date() });
+      console.log("✅ Saved to Firebase");
     } catch (e) {
-      console.error("Error saving to Firebase", e);
+      console.error("❌ Error saving to Firebase", e);
+      throw e; // Re-throw to let caller handle the error
     }
+  } else {
+    console.log("ℹ️ Firebase not available, skipping cloud sync");
   }
 };
 

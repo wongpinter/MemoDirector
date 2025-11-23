@@ -9,6 +9,13 @@ This directory contains all project documentation and development notes.
 - **[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)** - How to manage environment variables
 - **[SECURITY_CHECKLIST.md](SECURITY_CHECKLIST.md)** - Security best practices
 
+## Sync System (NEW!)
+
+- **[SYNC_STRATEGY.md](SYNC_STRATEGY.md)** - ⚡ LocalStorage-first sync architecture
+- **[SYNC_MIGRATION.md](SYNC_MIGRATION.md)** - What changed and how to use the new system
+- **[SYNC_UI_GUIDE.md](SYNC_UI_GUIDE.md)** - Visual guide to sync indicators and controls
+- **[SYNC_TESTING.md](SYNC_TESTING.md)** - Testing checklist for sync functionality
+
 ## Development Documentation
 
 - **[REFACTORING_GUIDE.md](REFACTORING_GUIDE.md)** - Guidelines for refactoring the codebase

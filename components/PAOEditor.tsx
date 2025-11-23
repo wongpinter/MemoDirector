@@ -600,14 +600,22 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900 flex justify-end gap-3">
-            <button onClick={onClose} className="px-4 py-2 rounded-lg text-slate-400 hover:text-white transition-colors">Cancel</button>
-            <button 
-                onClick={handleSave}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-emerald-900/20 transition-all active:scale-95"
-            >
-                <Save size={18} /> Save PAO
-            </button>
+        <div className="p-4 border-t border-slate-800 bg-slate-900">
+            <div className="flex justify-between items-center mb-3">
+                <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span>Saves instantly to device • Syncs to cloud automatically</span>
+                </div>
+            </div>
+            <div className="flex justify-end gap-3">
+                <button onClick={onClose} className="px-4 py-2 rounded-lg text-slate-400 hover:text-white transition-colors">Cancel</button>
+                <button 
+                    onClick={handleSave}
+                    className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-emerald-900/20 transition-all active:scale-95"
+                >
+                    <Save size={18} /> Save PAO
+                </button>
+            </div>
         </div>
       </div>
     </div>

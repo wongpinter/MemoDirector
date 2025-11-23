@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Grid, Settings, Download, Clapperboard, Loader2, Search, Check, BookOpen } from 'lucide-react';
+import { Grid, Settings, Download, Clapperboard, Loader2, Search, Check, BookOpen, Cloud, CloudOff, RefreshCw, Clock } from 'lucide-react';
 import { PAOGrid } from './components/PAOGrid';
 import { Stats } from './components/Stats';
 import { AnkiExport } from './components/AnkiExport';
@@ -19,7 +19,7 @@ enum Tab {
 }
 
 export default function App() {
-  const { items, loading, syncStatus, updateItem } = usePAOData();
+  const { items, loading, syncStatus, lastSyncTime, hasPendingSync, manualSync, updateItem } = usePAOData();
   const [activeTab, setActiveTab] = useState<Tab>(Tab.GRID);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [prefillPerson, setPrefillPerson] = useState<string | undefined>(undefined);
@@ -83,26 +83,56 @@ export default function App() {
         </div>
         
         {/* Sync Status Indicator */}
-        <div className="flex-1 flex justify-end px-4 pointer-events-none">
-            <div className={`flex items-center gap-2 text-xs font-mono transition-all duration-500 ${syncStatus === 'idle' ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
+        <div className="flex-1 flex justify-end px-2 sm:px-4 items-center gap-2">
+            {/* Status Display */}
+            <div className={`flex items-center gap-2 text-xs font-mono transition-all duration-300`}>
                 {syncStatus === 'syncing' && (
-                    <span className="flex items-center gap-1.5 text-slate-400">
+                    <span className="flex items-center gap-1.5 text-blue-400">
                         <Loader2 size={12} className="animate-spin" />
-                        <span className="hidden sm:inline">Syncing...</span>
+                        <span className="hidden sm:inline">Syncing to Cloud...</span>
                     </span>
                 )}
                 {syncStatus === 'saved' && (
                     <span className="flex items-center gap-1.5 text-emerald-400">
-                        <Check size={14} />
-                        <span className="hidden sm:inline">Saved</span>
+                        <Check size={12} />
+                        <span className="hidden sm:inline">Synced</span>
+                    </span>
+                )}
+                {syncStatus === 'pending' && (
+                    <span className="flex items-center gap-1.5 text-amber-400">
+                        <Clock size={12} />
+                        <span className="hidden sm:inline">Pending Sync</span>
                     </span>
                 )}
                 {syncStatus === 'error' && (
                     <span className="flex items-center gap-1.5 text-red-400">
-                        <span className="hidden sm:inline">Error</span>
+                        <CloudOff size={12} />
+                        <span className="hidden sm:inline">Sync Error</span>
+                    </span>
+                )}
+                {syncStatus === 'idle' && !hasPendingSync && lastSyncTime && (
+                    <span className="flex items-center gap-1.5 text-slate-500">
+                        <Cloud size={12} />
+                        <span className="hidden sm:inline">
+                            {new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                     </span>
                 )}
             </div>
+            
+            {/* Manual Sync Button */}
+            <button
+                onClick={manualSync}
+                disabled={syncStatus === 'syncing'}
+                className={`p-1.5 sm:p-2 rounded-md transition-all ${
+                    hasPendingSync 
+                        ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-md' 
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={hasPendingSync ? 'Sync pending changes to Firebase' : 'Sync to Firebase'}
+            >
+                <RefreshCw size={16} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
+            </button>
         </div>
         
         <div className="flex gap-0.5 sm:gap-1 bg-slate-800 p-0.5 sm:p-1 rounded-lg flex-shrink-0">

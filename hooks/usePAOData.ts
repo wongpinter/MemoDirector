@@ -1,22 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PAOItem } from '../types';
-import { loadPAOList, savePAOList } from '../services/db';
-import { useLocalStorage } from './useLocalStorage';
 import { useDebouncedValue } from './useDebouncedValue';
-import { STORAGE_KEYS, UI_CONSTANTS } from '../constants';
+import { UI_CONSTANTS } from '../constants';
+import { 
+  loadPAOData, 
+  saveToLocalStorage, 
+  syncToFirebase, 
+  startPeriodicSync,
+  hasPendingSync,
+  getLastSyncTime
+} from '../services/syncQueue';
 
-export type SyncStatus = 'idle' | 'syncing' | 'saved' | 'error';
+export type SyncStatus = 'idle' | 'syncing' | 'saved' | 'error' | 'pending';
 
 /**
- * Custom hook for managing PAO data with auto-save and sync
+ * Custom hook for managing PAO data with LocalStorage-first and periodic Firebase sync
  */
 export function usePAOData() {
   const [items, setItems] = useState<PAOItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
-  
-  // Local storage fallback for offline/anonymous users
-  const [localItems, setLocalItems] = useLocalStorage<PAOItem[]>(STORAGE_KEYS.PAO_DATA, []);
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
   
   // Debounce items for auto-save
   const debouncedItems = useDebouncedValue(items, UI_CONSTANTS.DEBOUNCE_DELAY);
@@ -26,12 +30,11 @@ export function usePAOData() {
     async function loadData() {
       setLoading(true);
       try {
-        const data = await loadPAOList();
+        const data = await loadPAOData();
         setItems(data);
+        setLastSyncTime(getLastSyncTime());
       } catch (error) {
         console.error('Failed to load data:', error);
-        // Fallback to local storage
-        setItems(localItems);
       } finally {
         setLoading(false);
       }
@@ -39,26 +42,61 @@ export function usePAOData() {
     loadData();
   }, []);
 
-  // Auto-save when items change (debounced)
+  // Auto-save to LocalStorage when items change (debounced)
   useEffect(() => {
     if (loading) return; // Don't save during initial load
 
-    async function saveData() {
-      setSyncStatus('syncing');
-      try {
-        await savePAOList(debouncedItems);
-        setLocalItems(debouncedItems); // Also save to local storage
+    try {
+      saveToLocalStorage(debouncedItems);
+      setSyncStatus('pending'); // Mark as pending sync to Firebase
+      setTimeout(() => {
+        if (hasPendingSync()) {
+          setSyncStatus('pending');
+        } else {
+          setSyncStatus('idle');
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to save to LocalStorage:', error);
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
+    }
+  }, [debouncedItems, loading]);
+
+  // Start periodic sync on mount
+  useEffect(() => {
+    const cleanup = startPeriodicSync((status) => {
+      if (status === 'syncing') {
+        setSyncStatus('syncing');
+      } else if (status === 'synced') {
         setSyncStatus('saved');
+        setLastSyncTime(Date.now());
         setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
-      } catch (error) {
-        console.error('Failed to save changes:', error);
+      } else if (status === 'error') {
         setSyncStatus('error');
         setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
       }
-    }
+    });
 
-    saveData();
-  }, [debouncedItems, loading]);
+    return cleanup;
+  }, []);
+
+  // Manual sync function
+  const manualSync = useCallback(async () => {
+    setSyncStatus('syncing');
+    const result = await syncToFirebase();
+    
+    if (result.success) {
+      setSyncStatus('saved');
+      setLastSyncTime(Date.now());
+      setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
+    } else {
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
+    }
+    
+    return result;
+  }, []);
 
   const updateItem = (updatedItem: PAOItem) => {
     setItems(prev => 
@@ -76,6 +114,9 @@ export function usePAOData() {
     items,
     loading,
     syncStatus,
+    lastSyncTime,
+    hasPendingSync: hasPendingSync(),
+    manualSync,
     updateItem,
     updateItems,
   };
