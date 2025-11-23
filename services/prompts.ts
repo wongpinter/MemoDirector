@@ -204,31 +204,35 @@ ${outputSchema}`;
  * Generate scene description prompt
  */
 export const getSceneDescriptionPrompt = (params: ScenePromptParams): string => {
-  return `You help create memorable movie scenes. Write in simple, easy words.
+  return `Create a memorable scene description using everyday language.
 
-SCENE:
-Who: ${params.person}
-Doing: ${params.action}
-With: ${params.object}
+SCENE ELEMENTS:
+Person: ${params.person}
+Action: ${params.action}
+Object: ${params.object}
 
-MAKE IT MEMORABLE:
-Use simple words that a 7-year-old can understand.
+WRITING STYLE - Choose ONE level:
 
-1. Add ONE thing you can sense:
-   - Smell: "smells like burnt popcorn" or "smells like flowers"
-   - Sound: "makes a loud BANG" or "goes squish squish"
-   - Feel: "feels cold and wet" or "feels sticky"
-   - Taste: "tastes like metal" or "tastes yucky"
+LEVEL 1 - Simple & Direct:
+Focus on what's happening. Use everyday words.
+Example: "Tony grabs the wrench and twists the rusty bolt. Metal scrapes against metal with a harsh screech."
 
-2. Make it feel strong:
-   - Gross: "slimy and yucky"
-   - Funny: "silly and weird"
-   - Scary: "dark and spooky"
-   - Exciting: "fast and wild"
+LEVEL 2 - Vivid & Sensory:
+Add sensory details to the action and object.
+Example: "Tony grips the cold, oil-stained wrench and cranks the corroded bolt. The metal groans and flakes of rust fall like orange snow."
 
-3. Keep it short: 50 words maximum. Use simple sentences.
+LEVEL 3 - Emotional & Intense:
+Make the action and object trigger strong feelings.
+Example: "Tony wrestles with the massive wrench, muscles straining as he attacks the stubborn bolt. The tool slips, scraping his knuckles raw against the jagged metal."
 
-Write the scene now (just the scene, nothing else):`;
+REQUIREMENTS:
+- Emphasize the ACTION and OBJECT (they're the memory anchors)
+- Add ONE sensory detail: sound, smell, texture, or visual
+- Use present tense
+- Maximum 50 words
+- Use everyday language, not fancy words
+
+Write the scene:`;
 };
 
 /**
