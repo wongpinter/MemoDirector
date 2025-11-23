@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { MAJOR_SYSTEM, MajorSystemRule } from '../types';
-import { BookOpen, Package, Loader2, ChevronLeft, ChevronRight, Rotate3D, AlertTriangle, GraduationCap, FileDown } from 'lucide-react';
+import { BookOpen, Package, ChevronLeft, ChevronRight, Rotate3D, GraduationCap } from 'lucide-react';
 
 export const MajorSystemTrainer: React.FC = () => {
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showCsvHelp, setShowCsvHelp] = useState(false);
@@ -175,50 +173,7 @@ html, body {
     setShowCsvHelp(true);
   };
 
-  const handleExportAPKG = async () => {
-    setIsExporting(true);
-    setExportError(null);
 
-    try {
-      // @ts-ignore
-      const AnkiExportLib = window.AnkiExport;
-      // @ts-ignore
-      const saveAs = window.saveAs;
-
-      if (!AnkiExportLib) {
-         throw new Error("AnkiExport library failed to load. Please check your internet connection and refresh.");
-      }
-      if (!saveAs) {
-         throw new Error("FileSaver library failed to load. Please check your internet connection and refresh.");
-      }
-
-      // Handle potential default export structure
-      const AnkiGen = AnkiExportLib.default || AnkiExportLib;
-
-      const apkg = new AnkiGen('Major System Rules (0-9)');
-      const styleTag = `<style>${cardCSS}</style>`;
-
-      for (const rule of MAJOR_SYSTEM) {
-        const front = styleTag + generateFrontHtml(rule);
-        const back = styleTag + generateBackHtml(rule);
-        apkg.addCard(front, back);
-      }
-
-      const zip = await apkg.save();
-      saveAs(zip, 'major-system-rules.apkg');
-    } catch (e: any) {
-      console.error("APKG Export failed:", e);
-      setExportError("APKG Export Failed: " + (e.message || "Unknown Error"));
-      
-      // Slight delay to allow UI to update before fallback download
-      setTimeout(() => {
-          handleDownloadTXT();
-          setExportError(prev => prev + ". Downloading Text backup instead...");
-      }, 1500);
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 max-w-4xl mx-auto">
@@ -233,37 +188,19 @@ html, body {
                     Learn to convert digits 0-9 into consonant sounds.
                 </p>
             </div>
-            <div className="flex items-center gap-2">
-                <button 
-                    onClick={handleDownloadTXT}
-                    disabled={isExporting}
-                    className="h-12 px-6 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-                    title="Download Text File"
-                >
-                    <FileDown size={20} /> <span className="hidden sm:inline">TXT</span>
-                </button>
-                <button 
-                    onClick={handleExportAPKG}
-                    disabled={isExporting}
-                    className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50"
-                >
-                    {isExporting ? <Loader2 size={20} className="animate-spin" /> : <Package size={20} />}
-                    Export Deck
-                </button>
-            </div>
+            <button 
+                onClick={() => {
+                    handleDownloadTXT();
+                    setShowCsvHelp(true);
+                }}
+                className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95"
+            >
+                <Package size={20} />
+                Export for Anki
+            </button>
         </div>
 
-        {exportError && (
-            <div className="p-4 bg-amber-900/30 border border-amber-500/30 rounded-xl text-amber-200 flex flex-col gap-2 animate-in fade-in">
-                <div className="flex items-center gap-3">
-                    <AlertTriangle size={20} /> 
-                    <span className="text-sm font-bold">{exportError}</span>
-                </div>
-                <div className="text-xs text-amber-300/80 pl-8">
-                    Please import the Text file manually if the APKG file was not generated.
-                </div>
-            </div>
-        )}
+
 
         {showCsvHelp && (
             <div className="bg-slate-800 border border-indigo-500/30 rounded-xl p-6 animate-in slide-in-from-top-2">

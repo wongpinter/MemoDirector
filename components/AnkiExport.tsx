@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PAOItem } from '../types';
 import { getPhoneticsForNumber } from '../constants';
-import { Download, Copy, FileText, ChevronLeft, ChevronRight, Rotate3D, Package, Loader2, FileDown, AlertTriangle, Info, BookOpen } from 'lucide-react';
+import { Download, Copy, FileText, ChevronLeft, ChevronRight, Rotate3D, BookOpen, Package } from 'lucide-react';
 
 interface AnkiExportProps {
   items: PAOItem[];
@@ -11,8 +11,6 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
   const completedItems = items.filter(i => i.completed);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
 
   // Demo item for when no items are completed yet
@@ -303,52 +301,7 @@ html, body {
     setShowTutorial(true); // Auto show tutorial on download
   };
 
-  const handleDownloadAPKG = async () => {
-    if (completedItems.length === 0) return;
-    setIsExporting(true);
-    setExportError(null);
 
-    try {
-      // @ts-ignore
-      const AnkiExportLib = window.AnkiExport;
-      // @ts-ignore
-      const saveAs = window.saveAs;
-
-      if (!AnkiExportLib) {
-        throw new Error("AnkiExport library failed to load from CDN. Please check internet connection.");
-      }
-      if (!saveAs) {
-        throw new Error("FileSaver library failed to load from CDN. Please check internet connection.");
-      }
-
-      // Handle UMD vs ES Module export differences on window
-      // Some builds put the constructor at default, others at root
-      const AnkiGen = AnkiExportLib.default || AnkiExportLib;
-
-      const apkg = new AnkiGen('MindPalace PAO');
-      const styleTag = `<style>${cardCSS}</style>`;
-
-      for (const item of completedItems) {
-        const front = styleTag + generateFrontHtml(item);
-        const back = styleTag + generateBackHtml(item);
-        
-        apkg.addCard(front, back);
-      }
-
-      const zip = await apkg.save();
-      saveAs(zip, 'mindpalace-pao.apkg');
-    } catch (error: any) {
-      console.error("APKG generation failed:", error);
-      setExportError("APKG Generation Failed: " + (error.message || "Unknown error"));
-      // Automatically fallback to TXT after a delay
-      setTimeout(() => {
-          handleDownloadTXT();
-          setExportError(prev => prev + ". Downloading Text backup instead...");
-      }, 1500);
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   // Render preview content safely
   const renderPreviewContent = () => {
@@ -403,51 +356,20 @@ html, body {
               : "Complete some PAO items to enable export."}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-            {/* Secondary TXT Button */}
-            <button 
-                onClick={() => {
-                    handleDownloadTXT();
-                    setShowTutorial(true);
-                }}
-                disabled={completedItems.length === 0 || isExporting}
-                className="h-12 px-6 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Download Text/CSV Backup"
-            >
-                <FileDown size={20} /> <span className="hidden sm:inline">TXT</span>
-            </button>
-
-            {/* Primary APKG Button */}
-            <button 
-                onClick={handleDownloadAPKG}
-                disabled={completedItems.length === 0 || isExporting}
-                className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-            >
-            {isExporting ? (
-                <>
-                    <Loader2 size={20} className="animate-spin" /> Generating...
-                </>
-            ) : (
-                <>
-                    <Package size={20} /> Export .APKG
-                </>
-            )}
-            </button>
-        </div>
+        <button 
+            onClick={() => {
+                handleDownloadTXT();
+                setShowTutorial(true);
+            }}
+            disabled={completedItems.length === 0}
+            className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Export Anki Deck"
+        >
+            <Download size={20} /> Export for Anki
+        </button>
       </div>
 
-      {exportError && (
-        <div className="p-4 bg-amber-900/30 border border-amber-500/30 rounded-xl text-amber-200 flex items-start gap-3 animate-in fade-in">
-            <AlertTriangle size={20} className="mt-0.5 shrink-0" />
-            <div className="flex-1">
-                <p className="font-bold text-sm">{exportError}</p>
-                <p className="text-xs mt-1 text-amber-300/80">
-                    Browser libraries sometimes fail. We automatically downloaded a Text file for you. 
-                    See the tutorial below on how to import it.
-                </p>
-            </div>
-        </div>
-      )}
+
 
       {/* Tutorial Section (Collapsible or always visible if toggled) */}
       {showTutorial && (
@@ -558,16 +480,19 @@ html, body {
                 </h4>
                 <ol className="list-decimal list-inside text-sm text-slate-300 space-y-3 ml-1">
                     <li className="pl-2">
-                        Click <strong>Export .APKG</strong> to download the Anki deck file.
+                        Click <strong>Export for Anki</strong> to download the deck file.
                     </li>
                     <li className="pl-2">
-                        Locate the <code>mindpalace-pao.apkg</code> file on your computer.
+                        Open Anki and go to <strong>File → Import...</strong>
                     </li>
                     <li className="pl-2">
-                        <strong>Double-click</strong> the file. Anki should open and import it automatically.
+                        Select the downloaded <code>mindpalace_pao_deck.txt</code> file.
                     </li>
                     <li className="pl-2">
-                        <span className="text-slate-400 italic">If APKG fails, use the <button onClick={() => setShowTutorial(!showTutorial)} className="text-indigo-400 underline">TXT Method</button>.</span>
+                        Ensure <strong>"Allow HTML in fields"</strong> is checked.
+                    </li>
+                    <li className="pl-2">
+                        Click <strong>Import</strong> and you're done!
                     </li>
                 </ol>
             </div>

@@ -28,6 +28,31 @@ export const DEFAULT_THEMES = [
   "Historical Figures"
 ];
 
+// UI Constants
+export const UI_CONSTANTS = {
+  CHAR_LIMIT: 280,
+  DEBOUNCE_DELAY: 1000,
+  TOAST_DURATION: 3000,
+  TOOLTIP_OFFSET: 250,
+  MAX_IMAGE_SIZE: 200 * 1024, // 200KB
+  GRID_PREVIEW_LINES: 2,
+  SAVE_STATUS_DISPLAY_DURATION: 2000,
+} as const;
+
+// Storage Keys
+export const STORAGE_KEYS = {
+  PAO_DATA: 'mindpalace_pao_data',
+  CUSTOM_THEMES: 'mindpalace_custom_themes',
+  USER_PREFERENCES: 'mindpalace_preferences',
+} as const;
+
+// API Limits (for future backend implementation)
+export const API_LIMITS = {
+  REQUESTS_PER_MINUTE: 10,
+  MAX_PROMPT_LENGTH: 2000,
+  MAX_SCENE_LENGTH: 280,
+} as const;
+
 // --- Reverse Lookup Logic ---
 
 export interface MajorResult {

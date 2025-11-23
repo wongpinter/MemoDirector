@@ -2,21 +2,21 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, Firestore } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL, FirebaseStorage } from 'firebase/storage';
 import { PAOItem } from '../types';
-import { TOTAL_NUMBERS } from '../constants';
+import { TOTAL_NUMBERS, STORAGE_KEYS } from '../constants';
 
 // ------------------------------------------------------------------
 // FIREBASE CONFIG
-// Note: In a real app, these are strictly from process.env
+// Note: Vite uses import.meta.env for environment variables
 // We use a try/catch block to allow the app to run in demo mode 
 // without crashing if keys are missing.
 // ------------------------------------------------------------------
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || "demo-key",
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "demo.firebaseapp.com",
-  projectId: process.env.FIREBASE_PROJECT_ID || "demo-project",
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
 };
 
 let db: Firestore | null = null;
@@ -25,26 +25,27 @@ let isFirebaseAvailable = false;
 
 // Initialize Firebase safely
 try {
-  if (!getApps().length && process.env.FIREBASE_API_KEY) {
+  if (!getApps().length && import.meta.env.VITE_FIREBASE_API_KEY) {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     storage = getStorage(app);
     isFirebaseAvailable = true;
-    console.log("Firebase initialized successfully.");
-  } else if (process.env.FIREBASE_API_KEY) {
+    console.log("✅ Firebase initialized successfully.");
+  } else if (import.meta.env.VITE_FIREBASE_API_KEY) {
       // Already initialized
        const app = getApps()[0];
        db = getFirestore(app);
        storage = getStorage(app);
        isFirebaseAvailable = true;
   } else {
-    console.warn("Firebase config missing. Falling back to LocalStorage.");
+    console.log("ℹ️ Firebase config not found. Using LocalStorage mode.");
   }
 } catch (e) {
-  console.error("Firebase init failed:", e);
+  console.error("❌ Firebase init failed:", e);
+  console.log("ℹ️ Falling back to LocalStorage mode.");
 }
 
-const LOCAL_STORAGE_KEY = 'mindpalace_pao_data';
+const LOCAL_STORAGE_KEY = STORAGE_KEYS.PAO_DATA;
 
 // Generate blank 00-99 list
 const generateEmptyList = (): PAOItem[] => {

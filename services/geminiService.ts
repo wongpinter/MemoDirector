@@ -1,10 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Suggestion, SUGGESTION_SCHEMA } from "../types";
-import { getPhoneticsForNumber } from "../constants";
+import { getPhoneticsForNumber, API_LIMITS } from "../constants";
+import { sanitizeForAIPrompt } from "../utils/validation";
 
-// Helper to get client with current key (important for Veo key switching)
+// Helper to get client with current key
 const getAI = () => {
-    const apiKey = process.env.API_KEY;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) return null;
     return new GoogleGenAI({ apiKey });
 }
@@ -19,6 +20,10 @@ export const getPAOSuggestions = async (
   if (!ai) {
     throw new Error("Gemini API Key is missing. Please check metadata.json or env vars.");
   }
+
+  // Sanitize inputs
+  const sanitizedTheme = sanitizeForAIPrompt(theme);
+  const sanitizedPerson = specificPerson ? sanitizeForAIPrompt(specificPerson) : undefined;
 
   const phonetics = getPhoneticsForNumber(number);
   const strNum = number.toString().padStart(2, '0');
@@ -37,27 +42,27 @@ export const getPAOSuggestions = async (
       - Vowels (a,e,i,o,u) and 'w','h','y' are ignored and can be used freely as fillers.
   `;
 
-  if (specificPerson && specificPerson.trim().length > 0) {
+  if (sanitizedPerson && sanitizedPerson.trim().length > 0) {
     if (strictMode) {
        prompt = `
         I am building a Major System PAO memory list.
         Target Number: ${strNum}
         
-        User Selected Character: "${specificPerson}"
+        User Selected Character: "${sanitizedPerson}"
         
         ${phoneticRules}
 
-        Task: Suggest 5 Action and Object pairs for "${specificPerson}".
+        Task: Suggest 5 Action and Object pairs for "${sanitizedPerson}".
         
         STRICT CONSTRAINT (Strict Mode Active):
         1. The Action verb MUST phonetically decode to ${strNum}.
         2. The Object noun MUST phonetically decode to ${strNum}.
-        3. Try to make the Action and Object somewhat relevant to "${specificPerson}" if possible, but PHONETIC FIT is the absolute priority.
+        3. Try to make the Action and Object somewhat relevant to "${sanitizedPerson}" if possible, but PHONETIC FIT is the absolute priority.
 
         Output JSON Format:
         {
           "suggestions": [
-            { "person": "${specificPerson}", "action": "Phonetic Action", "object": "Phonetic Object", "reasoning": "Action matches ${strNum} because... Object matches ${strNum} because..." }
+            { "person": "${sanitizedPerson}", "action": "Phonetic Action", "object": "Phonetic Object", "reasoning": "Action matches ${strNum} because... Object matches ${strNum} because..." }
           ]
         }
        `;
@@ -66,12 +71,12 @@ export const getPAOSuggestions = async (
         I am building a Major System PAO memory list.
         The user has already selected a specific character.
         
-        Character (Person): "${specificPerson}"
+        Character (Person): "${sanitizedPerson}"
         
-        Task: Suggest 5 distinct Action and Object pairs that are ICONIC to "${specificPerson}".
+        Task: Suggest 5 distinct Action and Object pairs that are ICONIC to "${sanitizedPerson}".
         
         Rules:
-        1. The 'Person' field in the output MUST be exactly "${specificPerson}".
+        1. The 'Person' field in the output MUST be exactly "${sanitizedPerson}".
         2. The Action must be something this specific character is famous for doing.
         3. The Object must be a tool, weapon, or item they frequently use.
         4. Ignore phonetic rules for the Name (since the user provided it), but ensure the Action/Object helps visualize the character strongly.
@@ -84,7 +89,7 @@ export const getPAOSuggestions = async (
       prompt = `
         I am building a Major System PAO (Person-Action-Object) memory list.
         Target Number: ${strNum}
-        Theme: ${theme}
+        Theme: ${sanitizedTheme}
         
         ${phoneticRules}
 
@@ -126,13 +131,18 @@ export const getSceneDescription = async (person: string, action: string, object
     const ai = getAI();
     if (!ai) return `${person} is ${action} with ${object}.`;
 
+    // Sanitize inputs
+    const sanitizedPerson = sanitizeForAIPrompt(person);
+    const sanitizedAction = sanitizeForAIPrompt(action);
+    const sanitizedObject = sanitizeForAIPrompt(object);
+
     const prompt = `
         You are an expert Memory Palace coach.
         Generate a "Director's Cut" scene description for a PAO (Person-Action-Object) system.
         
-        Subject: ${person}
-        Action: ${action}
-        Object: ${object}
+        Subject: ${sanitizedPerson}
+        Action: ${sanitizedAction}
+        Object: ${sanitizedObject}
         
         The goal is to create a "Sticky Memory" by invoking SENSES and EMOTIONS.
         
@@ -149,7 +159,7 @@ export const getSceneDescription = async (person: string, action: string, object
             -   **Fear** (Eerie, dangerous, nightmare)
         3.  **CONCISE**: Maximum 50 words. Short, punchy, present tense.
         
-        Example: ${person} furiously bites into the ${object}, which explodes with a screeching metal sound (Sound) and tastes like rotten eggs (Taste/Disgust).
+        Example: ${sanitizedPerson} furiously bites into the ${sanitizedObject}, which explodes with a screeching metal sound (Sound) and tastes like rotten eggs (Taste/Disgust).
         
         Generate ONLY the vivid scene description.
     `;
@@ -159,14 +169,16 @@ export const getSceneDescription = async (person: string, action: string, object
         contents: prompt
     });
 
-    return response.text?.trim() || `${person} is ${action} with ${object}.`;
+    return response.text?.trim() || `${sanitizedPerson} is ${sanitizedAction} with ${sanitizedObject}.`;
 }
 
 export const generateMemoryImage = async (sceneDescription: string): Promise<string> => {
   const ai = getAI();
   if (!ai) throw new Error("AI not initialized");
   
-  const prompt = `Generate an image of: ${sceneDescription}`;
+  // Sanitize scene description
+  const sanitizedScene = sanitizeForAIPrompt(sceneDescription);
+  const prompt = `Generate an image of: ${sanitizedScene}`;
   
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
@@ -203,10 +215,13 @@ export const generateMemoryVideo = async (sceneDescription: string): Promise<{bl
     const ai = getAI();
     if (!ai) throw new Error("AI not initialized");
 
+    // Sanitize scene description
+    const sanitizedScene = sanitizeForAIPrompt(sceneDescription);
+
     // Veo model requires paid key
     let operation = await ai.models.generateVideos({
         model: 'veo-3.1-fast-generate-preview',
-        prompt: sceneDescription,
+        prompt: sanitizedScene,
         config: {
             numberOfVideos: 1,
             resolution: '720p',

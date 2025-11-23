@@ -32,16 +32,20 @@ npm install
 
 The application relies on environment variables for the AI features and Database connectivity.
 
-Create a `.env` file in the root of your project.
+Copy the `.env.example` file to create your own `.env` file:
+
+```bash
+cp .env.example .env
+```
 
 #### A. Google Gemini API (Required for AI Suggestions)
 
-1.  Go to [Google AI Studio](https://aistudiocdn.com/google-api-key).
+1.  Go to [Google AI Studio](https://aistudio.google.com/apikey).
 2.  Create a new API Key.
 3.  Add it to your `.env` file:
 
 ```env
-API_KEY=your_google_ai_studio_key_here
+VITE_GEMINI_API_KEY=your_google_ai_studio_key_here
 ```
 
 #### B. Firebase Firestore (Optional - For Cloud Sync)
@@ -57,15 +61,15 @@ If you skip this, the app will default to **LocalStorage**, which works perfectl
 7.  Copy the configuration values into your `.env` file:
 
 ```env
-FIREBASE_API_KEY=...
-FIREBASE_AUTH_DOMAIN=...
-FIREBASE_PROJECT_ID=...
-FIREBASE_STORAGE_BUCKET=...
-FIREBASE_MESSAGING_SENDER_ID=...
-FIREBASE_APP_ID=...
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
 ```
 
-> **Note:** The application code (`services/db.ts`) automatically detects if these keys are present. If not, it falls back to LocalStorage without errors.
+> **Note:** All environment variables now use the `VITE_` prefix as per Vite conventions. The application code (`services/db.ts`) automatically detects if these keys are present. If not, it falls back to LocalStorage without errors.
 
 ### 3. Running the App
 
@@ -92,6 +96,22 @@ The app uses specific prompts in `geminiService.ts` to enforce Major System rule
 
 1.  **Strict Mode:** Forces the AI to find a Person, Action, *and* Object that all phonetically match the target number (e.g., for #15 (T-L), it might suggest "Ted Lasso", "Toiling", "Tool").
 2.  **Standard Mode:** Finds a Person fitting the phonetic rule, but allows the Action and Object to be thematically iconic to that person (e.g., "Thor" (14) -> "Throwing" -> "Hammer").
+
+## 🌐 Live Demo
+
+**Live URL:** https://memodirector.web.app
+
+The app is automatically deployed to Firebase Hosting when changes are pushed to the `main` branch.
+
+## 📚 Documentation
+
+For detailed documentation, development guides, and project status reports, see the [docs](docs/) directory:
+
+- [Quick Start Guide](docs/QUICK_START.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Refactoring Guide](docs/REFACTORING_GUIDE.md)
+- [Testing Report](docs/TESTING_REPORT.md)
+- [And more...](docs/README.md)
 
 ## 📜 License
 

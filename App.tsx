@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Grid, Settings, Download, Clapperboard, Save, Loader2, Search, Check, BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { Grid, Settings, Download, Clapperboard, Loader2, Search, Check, BookOpen } from 'lucide-react';
 import { PAOGrid } from './components/PAOGrid';
 import { Stats } from './components/Stats';
 import { AnkiExport } from './components/AnkiExport';
 import { ReverseLookup } from './components/ReverseLookup';
 import { PAOEditor } from './components/PAOEditor';
 import { MajorSystemTrainer } from './components/MajorSystemTrainer';
-import { loadPAOList, savePAOList } from './services/db';
 import { PAOItem } from './types';
+import { usePAOData } from './hooks';
+import { ToastProvider } from './contexts';
 
 enum Tab {
   GRID = 'GRID',
@@ -17,43 +18,11 @@ enum Tab {
   SYSTEM = 'SYSTEM'
 }
 
-type SyncStatus = 'IDLE' | 'SYNCING' | 'SAVED';
-
 export default function App() {
-  const [items, setItems] = useState<PAOItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items, loading, syncStatus, updateItem } = usePAOData();
   const [activeTab, setActiveTab] = useState<Tab>(Tab.GRID);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [prefillPerson, setPrefillPerson] = useState<string | undefined>(undefined);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('IDLE');
-
-  // Initial Data Load
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const data = await loadPAOList();
-      setItems(data);
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
-
-  // Auto-save effect (debounced could be better, but direct for simplicity here)
-  const handleUpdateItem = async (updatedItem: PAOItem) => {
-    // Optimistic update for UI responsiveness
-    const newItems = items.map(item => item.number === updatedItem.number ? updatedItem : item);
-    setItems(newItems);
-    
-    setSyncStatus('SYNCING');
-    try {
-        await savePAOList(newItems);
-        setSyncStatus('SAVED');
-        setTimeout(() => setSyncStatus('IDLE'), 2000);
-    } catch (e) {
-        console.error("Sync failed", e);
-        setSyncStatus('IDLE'); // Optionally handle error state
-    }
-  };
 
   const handleReverseAssign = (number: number, name: string) => {
     setSelectedNumber(number);
@@ -70,7 +39,7 @@ export default function App() {
             // Update completion status based on whether other fields already existed
             completed: !!(person && existing.action && existing.object)
         };
-        handleUpdateItem(updated);
+        updateItem(updated);
     }
   };
 
@@ -97,7 +66,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col max-w-4xl mx-auto bg-slate-900 text-slate-50">
+    <ToastProvider>
+      <div className="min-h-screen flex flex-col max-w-4xl mx-auto bg-slate-900 text-slate-50">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-4 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
@@ -114,17 +84,22 @@ export default function App() {
         
         {/* Sync Status Indicator */}
         <div className="flex-1 flex justify-end px-4 pointer-events-none">
-            <div className={`flex items-center gap-2 text-xs font-mono transition-all duration-500 ${syncStatus === 'IDLE' ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
-                {syncStatus === 'SYNCING' && (
+            <div className={`flex items-center gap-2 text-xs font-mono transition-all duration-500 ${syncStatus === 'idle' ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
+                {syncStatus === 'syncing' && (
                     <span className="flex items-center gap-1.5 text-slate-400">
                         <Loader2 size={12} className="animate-spin" />
                         <span className="hidden sm:inline">Syncing...</span>
                     </span>
                 )}
-                {syncStatus === 'SAVED' && (
+                {syncStatus === 'saved' && (
                     <span className="flex items-center gap-1.5 text-emerald-400">
                         <Check size={14} />
                         <span className="hidden sm:inline">Saved</span>
+                    </span>
+                )}
+                {syncStatus === 'error' && (
+                    <span className="flex items-center gap-1.5 text-red-400">
+                        <span className="hidden sm:inline">Error</span>
                     </span>
                 )}
             </div>
@@ -204,9 +179,10 @@ export default function App() {
           number={selectedNumber}
           initialData={getEditorInitialData()}
           onClose={handleCloseEditor}
-          onSave={handleUpdateItem}
+          onSave={updateItem}
         />
       )}
-    </div>
+      </div>
+    </ToastProvider>
   );
 }
