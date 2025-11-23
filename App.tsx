@@ -67,9 +67,9 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen flex flex-col w-full bg-slate-900 text-slate-50">
+      <div className="h-screen flex flex-col w-full bg-slate-900 text-slate-50 overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-3 sm:p-4 flex items-center justify-between shadow-lg w-full">
+      <header className="flex-shrink-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-3 sm:p-4 flex items-center justify-between shadow-lg w-full">
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <div className="bg-indigo-600 p-1.5 sm:p-2 rounded-xl shadow-lg shadow-indigo-500/20 transform -rotate-6 transition-transform hover:rotate-0">
             <Clapperboard className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -175,7 +175,8 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 overflow-y-auto overflow-x-hidden max-w-7xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden w-full">
+        <div className="p-4 max-w-7xl mx-auto w-full">
         {loading ? (
           <div className="h-64 flex flex-col items-center justify-center text-slate-500 animate-pulse">
             <Loader2 className="w-8 h-8 animate-spin mb-2" />
@@ -201,6 +202,7 @@ export default function App() {
             {activeTab === Tab.EXPORT && <AnkiExport items={items} />}
           </>
         )}
+        </div>
       </main>
 
       {/* Editor Modal */}
