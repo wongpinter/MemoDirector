@@ -212,6 +212,7 @@ export default function App() {
           initialData={getEditorInitialData()}
           onClose={handleCloseEditor}
           onSave={updateItem}
+          allItems={items}
         />
       )}
       </div>

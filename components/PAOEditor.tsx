@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PAOItem, Suggestion } from '../types';
 import { getPhoneticsForNumber, DEFAULT_THEMES } from '../constants';
 import { getPAOSuggestions, getSceneDescription, generateMemoryImage, generateMemoryVideo } from '../services/llmService';
 import { uploadMedia } from '../services/db';
-import { X, Sparkles, Save, Wand2, AlertCircle, Clapperboard, Undo2, ArrowRight, Users, Megaphone, Trash2, Ear, Image as ImageIcon, Video as VideoIcon, Loader2, Play } from 'lucide-react';
+import { X, Sparkles, Save, Wand2, AlertCircle, Clapperboard, Undo2, ArrowRight, Users, Megaphone, Trash2, Ear, Image as ImageIcon, Video as VideoIcon, Loader2, Play, AlertTriangle } from 'lucide-react';
+import { detectConflicts } from '../utils/conflictDetection';
 
 interface PAOEditorProps {
   number: number;
   initialData?: PAOItem;
   onClose: () => void;
   onSave: (item: PAOItem) => void;
+  allItems?: PAOItem[];
 }
 
-export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClose, onSave }) => {
+export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClose, onSave, allItems = [] }) => {
   const [person, setPerson] = useState(initialData?.person || '');
   const [action, setAction] = useState(initialData?.action || '');
   const [object, setObject] = useState(initialData?.object || '');
@@ -54,6 +56,28 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
         console.error("Failed to load custom themes", e);
     }
   }, []);
+
+  // Check for conflicts with current values
+  const currentConflicts = useMemo(() => {
+    if (!person && !action && !object) return null;
+    
+    const testItem: PAOItem = {
+      number,
+      person,
+      action,
+      object,
+      completed: false
+    };
+    
+    // Create a test array with all items except current number
+    const testItems = [
+      ...allItems.filter(i => i.number !== number),
+      testItem
+    ];
+    
+    const conflictMap = detectConflicts(testItems);
+    return conflictMap.get(number);
+  }, [person, action, object, number, allItems]);
 
   const handleSave = () => {
     // Validation
@@ -448,6 +472,30 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
                 </div>
             )}
           </div>
+
+          {/* Conflict Warning */}
+          {currentConflicts && (
+            <div className="bg-amber-950/30 border border-amber-600/50 p-4 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                <AlertTriangle size={16} />
+                <span>Duplicate Detected</span>
+              </div>
+              <div className="text-xs text-amber-200 space-y-1">
+                {currentConflicts.person && (
+                  <div>• Person "{currentConflicts.person.value}" is already used in: {currentConflicts.person.numbers.map(n => n.toString().padStart(2, '0')).join(', ')}</div>
+                )}
+                {currentConflicts.action && (
+                  <div>• Action "{currentConflicts.action.value}" is already used in: {currentConflicts.action.numbers.map(n => n.toString().padStart(2, '0')).join(', ')}</div>
+                )}
+                {currentConflicts.object && (
+                  <div>• Object "{currentConflicts.object.value}" is already used in: {currentConflicts.object.numbers.map(n => n.toString().padStart(2, '0')).join(', ')}</div>
+                )}
+              </div>
+              <p className="text-[10px] text-amber-300/80 italic">
+                Using the same elements across numbers can reduce memory effectiveness. Consider using unique combinations.
+              </p>
+            </div>
+          )}
 
           {/* Manual Input Form */}
           <div className="space-y-4">
