@@ -16,7 +16,9 @@ export interface Suggestion {
   person: string;
   action: string;
   object: string;
-  reasoning: string;
+  notes?: string;
+  person_description?: string;
+  reasoning?: string; // Legacy field, kept for backward compatibility
 }
 
 export interface MajorSystemRule {
@@ -50,9 +52,10 @@ export const SUGGESTION_SCHEMA = {
           person: { type: Type.STRING, description: "The character name." },
           action: { type: Type.STRING, description: "An action characteristic of the person." },
           object: { type: Type.STRING, description: "An object associated with the person." },
-          reasoning: { type: Type.STRING, description: "Why this fits the Major System phonetics." }
+          notes: { type: Type.STRING, description: "Optional: explain how the name decodes to the number." },
+          person_description: { type: Type.STRING, description: "Short description of who the person is." }
         },
-        required: ["person", "action", "object", "reasoning"]
+        required: ["person", "action", "object"]
       }
     }
   }
