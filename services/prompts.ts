@@ -62,19 +62,33 @@ export const getPhoneticRules = (params: PAOPromptParams): string => {
 /**
  * Output schema definition
  */
-const getOutputSchema = (): string => {
-  return `OUTPUT SCHEMA (EXACT):
+const getOutputSchema = (includeNotes: boolean = true): string => {
+  if (includeNotes) {
+    return `OUTPUT SCHEMA (EXACT):
 {
   "suggestions": [
     {
       "person": "Person Name",
       "action": "Short iconic action",
       "object": "Short iconic object",
-      "notes": "Optional: explain how the name decodes to the number",
-      "person_description": "Short description of who the person is"
+      "person_description": "Who this person is (e.g., 'Wizard from Harry Potter', 'Bitcoin creator')",
+      "notes": "How the name decodes (e.g., 'S(0) + D(1) = 01')"
     }
   ]
 }`;
+  } else {
+    return `OUTPUT SCHEMA (EXACT):
+{
+  "suggestions": [
+    {
+      "person": "Person Name",
+      "action": "Short iconic action",
+      "object": "Short iconic object",
+      "person_description": "Who this person is and why action/object fit them"
+    }
+  ]
+}`;
+  }
 };
 
 /**
@@ -83,7 +97,7 @@ const getOutputSchema = (): string => {
 export const getPAOThemePrompt = (params: PAOPromptParams): string => {
   const systemInstruction = getSystemInstruction();
   const phoneticRules = getPhoneticRules(params);
-  const outputSchema = getOutputSchema();
+  const outputSchema = getOutputSchema(true);
 
   return `${systemInstruction}
 
@@ -106,7 +120,9 @@ REQUIREMENTS:
 3. ACTION and OBJECT do NOT need to follow phonetics${params.strictMode ? ' (STRICT MODE: but should if possible)' : ''}.
 4. Avoid generic verbs/nouns (no "walk", "bag").
 5. Maintain thematic consistency.
-6. Use the **exact schema** below.
+6. ALWAYS fill person_description with who the person is (1-5 words).
+7. ALWAYS fill notes with phonetic explanation (e.g., "S(0) + D(1) = 01").
+8. Use the **exact schema** below.
 
 ---
 
@@ -120,7 +136,7 @@ Return ONLY valid JSON following the schema.`;
  */
 export const getPAOPersonPrompt = (params: PAOPromptParams): string => {
   const systemInstruction = getSystemInstruction();
-  const outputSchema = getOutputSchema();
+  const outputSchema = getOutputSchema(false);
 
   return `${systemInstruction}
 
@@ -139,7 +155,8 @@ REQUIREMENTS:
 4. OBJECT must be an item/tool/weapon they frequently use or are strongly associated with.
 5. IGNORE phonetic requirements for the Name (user already selected it).
 6. Keep Action and Object short (3 words max each).
-7. Use the **exact schema** below.
+7. ALWAYS fill person_description explaining who this character is and why the action/object fit.
+8. Use the **exact schema** below.
 
 ---
 
@@ -154,7 +171,7 @@ Return ONLY valid JSON following the schema.`;
 export const getPAOStrictPersonPrompt = (params: PAOPromptParams): string => {
   const systemInstruction = getSystemInstruction();
   const phoneticRules = getPhoneticRules(params);
-  const outputSchema = getOutputSchema();
+  const outputSchema = getOutputSchema(true);
 
   return `${systemInstruction}
 
@@ -176,8 +193,9 @@ STRICT REQUIREMENTS (Strict Mode Active):
 2. The ACTION verb MUST phonetically decode to ${params.strNum}.
 3. The OBJECT noun MUST phonetically decode to ${params.strNum}.
 4. Make them thematically relevant to the person if possible, but PHONETIC FIT is the absolute priority.
-5. In the 'notes' field, explain how each Action/Object decodes to ${params.strNum}.
-6. Use the **exact schema** below.
+5. ALWAYS fill person_description with who this character is.
+6. ALWAYS fill notes explaining how Action and Object decode to ${params.strNum}.
+7. Use the **exact schema** below.
 
 ---
 

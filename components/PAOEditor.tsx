@@ -374,16 +374,18 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
                                 onClick={() => applySuggestion(s)}
                                 className="group p-4 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/50 rounded-xl cursor-pointer transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
                             >
-                                {/* Header: Person & Reasoning */}
+                                {/* Header: Person & Description */}
                                 <div className="mb-4">
                                     <div className="flex justify-between items-start">
                                         <h4 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors">
                                             {s.person}
                                         </h4>
                                     </div>
-                                    <div className="mt-2 text-sm text-slate-400 italic leading-relaxed bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                                        "{s.reasoning}"
-                                    </div>
+                                    {(s.person_description || s.notes || s.reasoning) && (
+                                        <div className="mt-2 text-sm text-slate-400 italic leading-relaxed bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                                            {s.person_description || s.notes || s.reasoning}
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 {/* Action & Object Tags */}
