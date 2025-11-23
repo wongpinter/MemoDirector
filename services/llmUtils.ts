@@ -72,3 +72,53 @@ export async function fetchWithTimeout(
     throw error;
   }
 }
+
+/**
+ * Clean up LLM thinking/reasoning text from responses
+ * Removes common thinking patterns that leak into output
+ */
+export function cleanLLMThinking(text: string): string {
+  if (!text) return text;
+
+  // Remove thinking patterns
+  const thinkingPatterns = [
+    /\(.*?words.*?\)/gi,                    // (6 words), (7 words - ok!)
+    /\bOk,?\s+that'?s?\s+\d+\s+words\.?/gi, // Ok, that's 6 words
+    /\bWait,?\s+I\s+need\s+to\s+.+?\./gi,   // Wait, I need to check...
+    /\bLet\s+me\s+.+?\./gi,                 // Let me rephrase...
+    /\bI'?ll\s+.+?\./gi,                    // I'll stick to that
+    /\bMy\s+bad,?\s+.+?\./gi,               // My bad, I'll count...
+    /\bOh,?\s+the\s+previous\s+one\s+.+?\./gi, // Oh, the previous one was...
+    /\bStill\s+OK!?\s*/gi,                  // Still OK!
+    /\bOkay,?\s+I'?ll\s+.+?\./gi,          // Okay, I'll stick to that
+    /\bI'?m\s+overthinking\s+this\.?/gi,   // I'm overthinking this
+    /\bNo!\s+\d+\s+words\.?/gi,            // No! 7 words
+  ];
+
+  let cleaned = text;
+  
+  // Apply all patterns
+  for (const pattern of thinkingPatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+
+  // Clean up extra whitespace and trim
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  // Remove leading/trailing punctuation artifacts
+  cleaned = cleaned.replace(/^[,.\s]+|[,.\s]+$/g, '');
+
+  return cleaned;
+}
+
+/**
+ * Enforce word limit on text
+ */
+export function enforceWordLimit(text: string, maxWords: number): string {
+  if (!text) return text;
+  
+  const words = text.trim().split(/\s+/);
+  if (words.length <= maxWords) return text;
+  
+  return words.slice(0, maxWords).join(' ');
+}

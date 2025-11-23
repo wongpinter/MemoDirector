@@ -15,7 +15,7 @@ import {
   PAOPromptParams,
   ScenePromptParams
 } from "./prompts";
-import { fetchWithTimeout, DEFAULT_LLM_TIMEOUT } from "./llmUtils";
+import { fetchWithTimeout, DEFAULT_LLM_TIMEOUT, cleanLLMThinking, enforceWordLimit } from "./llmUtils";
 
 export class OllamaProvider implements ILLMProvider {
   private baseUrl: string;
@@ -98,7 +98,18 @@ export class OllamaProvider implements ILLMProvider {
 
     try {
       const parsed = JSON.parse(responseText);
-      return parsed.suggestions || [];
+      const suggestions = parsed.suggestions || [];
+      
+      // Clean up thinking text from person_description
+      return suggestions.map((s: Suggestion) => ({
+        ...s,
+        person_description: s.person_description 
+          ? enforceWordLimit(cleanLLMThinking(s.person_description), 8)
+          : s.person_description,
+        notes: s.notes 
+          ? cleanLLMThinking(s.notes)
+          : s.notes
+      }));
     } catch (e) {
       console.error("JSON Parse error", e);
       return [];

@@ -44,7 +44,10 @@ const getSystemInstruction = (): string => {
 You output machine-readable JSON only. No markdown, no code fences, no explanations outside JSON.
 If you cannot produce 5 valid suggestions, output the ones you can and include an "explanation" field.
 
-CRITICAL: person_description field MUST be 8 words or less. Be concise.`;
+CRITICAL RULES:
+- person_description field MUST be 8 words or less. Be concise.
+- DO NOT include thinking process, word counts, or meta-commentary in your output.
+- Output ONLY the final answer in each field, not your reasoning about it.`;
 };
 
 /**
