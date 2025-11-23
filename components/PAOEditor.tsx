@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PAOItem, Suggestion } from '../types';
 import { getPhoneticsForNumber, DEFAULT_THEMES } from '../constants';
-import { getPAOSuggestions, getSceneDescription, generateMemoryImage, generateMemoryVideo } from '../services/geminiService';
+import { getPAOSuggestions, getSceneDescription, generateMemoryImage, generateMemoryVideo } from '../services/llmService';
 import { uploadMedia } from '../services/db';
 import { X, Sparkles, Save, Wand2, AlertCircle, Clapperboard, Undo2, ArrowRight, Users, Megaphone, Trash2, Ear, Image as ImageIcon, Video as VideoIcon, Loader2, Play } from 'lucide-react';
 

@@ -1,237 +1,174 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Suggestion, SUGGESTION_SCHEMA } from "../types";
-import { getPhoneticsForNumber, API_LIMITS } from "../constants";
+import { getPhoneticsForNumber } from "../constants";
 import { sanitizeForAIPrompt } from "../utils/validation";
+import { ILLMProvider } from "./llmTypes";
+import {
+  getPAOStrictPersonPrompt,
+  getPAOPersonPrompt,
+  getPAOThemePrompt,
+  getSceneDescriptionPrompt,
+  getImageGenerationPrompt,
+  PAOPromptParams,
+  ScenePromptParams
+} from "./prompts";
 
-// Helper to get client with current key
-const getAI = () => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return null;
-    return new GoogleGenAI({ apiKey });
-}
+/**
+ * Gemini LLM Provider Implementation
+ */
+class GeminiProvider implements ILLMProvider {
+  private ai: GoogleGenAI | null;
+  private model: string;
 
-export const getPAOSuggestions = async (
-  number: number,
-  theme: string,
-  specificPerson?: string,
-  strictMode: boolean = false
-): Promise<Suggestion[]> => {
-  const ai = getAI();
-  if (!ai) {
-    throw new Error("Gemini API Key is missing. Please check metadata.json or env vars.");
-  }
-
-  // Sanitize inputs
-  const sanitizedTheme = sanitizeForAIPrompt(theme);
-  const sanitizedPerson = specificPerson ? sanitizeForAIPrompt(specificPerson) : undefined;
-
-  const phonetics = getPhoneticsForNumber(number);
-  const strNum = number.toString().padStart(2, '0');
-  const d1 = strNum[0];
-  const d2 = strNum[1];
-
-  let prompt = "";
-
-  // Shared phonetic instruction block
-  const phoneticRules = `
-      Phonetic Rules for Number ${strNum}:
-      - The word must be constructed using the Major System sounds.
-      - Digit 1 (${d1}): First consonant sound must be compatible.
-      - Digit 2 (${d2}): Next consonant sound must be compatible.
-      - Helper: ${phonetics}.
-      - Vowels (a,e,i,o,u) and 'w','h','y' are ignored and can be used freely as fillers.
-  `;
-
-  if (sanitizedPerson && sanitizedPerson.trim().length > 0) {
-    if (strictMode) {
-       prompt = `
-        I am building a Major System PAO memory list.
-        Target Number: ${strNum}
-        
-        User Selected Character: "${sanitizedPerson}"
-        
-        ${phoneticRules}
-
-        Task: Suggest 5 Action and Object pairs for "${sanitizedPerson}".
-        
-        STRICT CONSTRAINT (Strict Mode Active):
-        1. The Action verb MUST phonetically decode to ${strNum}.
-        2. The Object noun MUST phonetically decode to ${strNum}.
-        3. Try to make the Action and Object somewhat relevant to "${sanitizedPerson}" if possible, but PHONETIC FIT is the absolute priority.
-
-        Output JSON Format:
-        {
-          "suggestions": [
-            { "person": "${sanitizedPerson}", "action": "Phonetic Action", "object": "Phonetic Object", "reasoning": "Action matches ${strNum} because... Object matches ${strNum} because..." }
-          ]
-        }
-       `;
+  constructor(apiKey?: string, model?: string) {
+    this.model = model || 'gemini-2.5-flash';
+    if (!apiKey) {
+      this.ai = null;
     } else {
-      prompt = `
-        I am building a Major System PAO memory list.
-        The user has already selected a specific character.
-        
-        Character (Person): "${sanitizedPerson}"
-        
-        Task: Suggest 5 distinct Action and Object pairs that are ICONIC to "${sanitizedPerson}".
-        
-        Rules:
-        1. The 'Person' field in the output MUST be exactly "${sanitizedPerson}".
-        2. The Action must be something this specific character is famous for doing.
-        3. The Object must be a tool, weapon, or item they frequently use.
-        4. Ignore phonetic rules for the Name (since the user provided it), but ensure the Action/Object helps visualize the character strongly.
-        5. Ensure the Action and Object are thematically consistent with the character's universe.
-        
-        Output JSON Format per Schema.
-      `;
+      this.ai = new GoogleGenAI({ apiKey });
     }
-  } else {
-      prompt = `
-        I am building a Major System PAO (Person-Action-Object) memory list.
-        Target Number: ${strNum}
-        Theme: ${sanitizedTheme}
-        
-        ${phoneticRules}
-
-        Task: Suggest 5 Person-Action-Object sets where the PERSON'S NAME phonetically matches ${strNum}.
-        
-        Rules:
-        1. The Person's name MUST decode to ${strNum} based on Major System rules.
-           - Example for 15 (T-L): "Ted Lasso", "Dalai Lama".
-           - Example for 32 (M-N): "Moon Knight", "Mulan".
-        2. The Action and Object should be iconic to that person (thematic connection).
-           - Action/Object do NOT need to fit phonetic rules (unless strict mode is requested, but assume standard mode here).
-           - They must be highly visual.
-
-        Output JSON Format per Schema.
-      `;
   }
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: SUGGESTION_SCHEMA
+  private ensureAI(): GoogleGenAI {
+    if (!this.ai) {
+      throw new Error("Gemini API Key is missing. Please check your environment variables.");
     }
-  });
-  
-  if (!response.text) return [];
-
-  try {
-      const parsed = JSON.parse(response.text);
-      return parsed.suggestions || [];
-  } catch (e) {
-      console.error("JSON Parse error", e);
-      return [];
+    return this.ai;
   }
-};
 
-export const getSceneDescription = async (person: string, action: string, object: string): Promise<string> => {
-    const ai = getAI();
-    if (!ai) return `${person} is ${action} with ${object}.`;
+  async generatePAOSuggestions(
+    number: number,
+    theme: string,
+    specificPerson?: string,
+    strictMode: boolean = false
+  ): Promise<Suggestion[]> {
+    const ai = this.ensureAI();
 
     // Sanitize inputs
-    const sanitizedPerson = sanitizeForAIPrompt(person);
-    const sanitizedAction = sanitizeForAIPrompt(action);
-    const sanitizedObject = sanitizeForAIPrompt(object);
+    const sanitizedTheme = sanitizeForAIPrompt(theme);
+    const sanitizedPerson = specificPerson ? sanitizeForAIPrompt(specificPerson) : undefined;
 
-    const prompt = `
-        You are an expert Memory Palace coach.
-        Generate a "Director's Cut" scene description for a PAO (Person-Action-Object) system.
-        
-        Subject: ${sanitizedPerson}
-        Action: ${sanitizedAction}
-        Object: ${sanitizedObject}
-        
-        The goal is to create a "Sticky Memory" by invoking SENSES and EMOTIONS.
-        
-        INSTRUCTIONS:
-        1.  **SENSORY FOCUS**: Do not rely on sight. You MUST include specific details for:
-            -   **Smell** (e.g. burning rubber, rotting fish, fresh mint) OR
-            -   **Sound** (e.g. high-pitched screech, wet squelch, thunderous boom) OR
-            -   **Touch** (e.g. slimy, gritty, freezing cold, sticky) OR
-            -   **Taste** (e.g. metallic blood, sour lemon, bitter ash).
-        2.  **EMOTIONAL TRIGGER**: The scene must trigger a specific feeling. Choose one:
-            -   **Disgust** (Gross, molding, bodily fluids)
-            -   **Funny** (Absurd, slapstick, ridiculous)
-            -   **Anger/Violence** (Shattering, crushing, screaming)
-            -   **Fear** (Eerie, dangerous, nightmare)
-        3.  **CONCISE**: Maximum 50 words. Short, punchy, present tense.
-        
-        Example: ${sanitizedPerson} furiously bites into the ${sanitizedObject}, which explodes with a screeching metal sound (Sound) and tastes like rotten eggs (Taste/Disgust).
-        
-        Generate ONLY the vivid scene description.
-    `;
+    const phonetics = getPhoneticsForNumber(number);
+    const strNum = number.toString().padStart(2, '0');
+    const d1 = strNum[0];
+    const d2 = strNum[1];
+
+    const params: PAOPromptParams = {
+      number,
+      strNum,
+      d1,
+      d2,
+      phonetics,
+      theme: sanitizedTheme,
+      specificPerson: sanitizedPerson,
+      strictMode
+    };
+
+    let prompt = "";
+
+    if (sanitizedPerson && sanitizedPerson.trim().length > 0) {
+      if (strictMode) {
+        prompt = getPAOStrictPersonPrompt(params);
+      } else {
+        prompt = getPAOPersonPrompt(params);
+      }
+    } else {
+      prompt = getPAOThemePrompt(params);
+    }
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt
+      model: this.model,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: SUGGESTION_SCHEMA
+      }
     });
 
-    return response.text?.trim() || `${sanitizedPerson} is ${sanitizedAction} with ${sanitizedObject}.`;
-}
+    if (!response.text) return [];
 
-export const generateMemoryImage = async (sceneDescription: string): Promise<string> => {
-  const ai = getAI();
-  if (!ai) throw new Error("AI not initialized");
-  
-  // Sanitize scene description
-  const sanitizedScene = sanitizeForAIPrompt(sceneDescription);
-  const prompt = `Generate an image of: ${sanitizedScene}`;
-  
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: {
-      parts: [{ text: prompt }]
-    },
-    config: {
-        imageConfig: {
-            aspectRatio: "1:1"
-        }
+    try {
+      const parsed = JSON.parse(response.text);
+      return parsed.suggestions || [];
+    } catch (e) {
+      console.error("JSON Parse error", e);
+      return [];
     }
-  });
+  }
 
-  if (response.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData && part.inlineData.data) {
-            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+  async generateSceneDescription(person: string, action: string, object: string): Promise<string> {
+    const ai = this.ensureAI();
+
+    // Sanitize inputs
+    const params: ScenePromptParams = {
+      person: sanitizeForAIPrompt(person),
+      action: sanitizeForAIPrompt(action),
+      object: sanitizeForAIPrompt(object)
+    };
+
+    const prompt = getSceneDescriptionPrompt(params);
+
+    const response = await ai.models.generateContent({
+      model: this.model,
+      contents: prompt
+    });
+
+    return response.text?.trim() || `${person} is ${action} with ${object}.`;
+  }
+
+  async generateMemoryImage(sceneDescription: string): Promise<string> {
+    const ai = this.ensureAI();
+
+    const sanitizedScene = sanitizeForAIPrompt(sceneDescription);
+    const prompt = getImageGenerationPrompt(sanitizedScene);
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [{ text: prompt }]
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
         }
       }
-  }
-  
-  // Handle text refusal if present
-  const textPart = response.candidates?.[0]?.content?.parts?.find(p => p.text)?.text;
-  if (textPart) {
+    });
+
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData && part.inlineData.data) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+      }
+    }
+
+    const textPart = response.candidates?.[0]?.content?.parts?.find(p => p.text)?.text;
+    if (textPart) {
       console.warn("Image Generation - Text returned:", textPart);
       throw new Error(`Model refused to generate image: ${textPart}`);
+    }
+
+    console.warn("Generative Error: Model response did not contain inline image data.", response);
+    throw new Error("No image data generated. The model may have filtered the request due to safety settings.");
   }
-  
-  console.warn("Generative Error: Model response did not contain inline image data.", response);
-  throw new Error("No image data generated. The model may have filtered the request due to safety settings.");
-};
 
-export const generateMemoryVideo = async (sceneDescription: string): Promise<{blob: Blob, mimeType: string}> => {
-    const ai = getAI();
-    if (!ai) throw new Error("AI not initialized");
-
-    // Sanitize scene description
+  async generateMemoryVideo(sceneDescription: string): Promise<{blob: Blob, mimeType: string}> {
+    const ai = this.ensureAI();
     const sanitizedScene = sanitizeForAIPrompt(sceneDescription);
 
-    // Veo model requires paid key
     let operation = await ai.models.generateVideos({
-        model: 'veo-3.1-fast-generate-preview',
-        prompt: sanitizedScene,
-        config: {
-            numberOfVideos: 1,
-            resolution: '720p',
-            aspectRatio: '16:9'
-        }
+      model: 'veo-3.1-fast-generate-preview',
+      prompt: sanitizedScene,
+      config: {
+        numberOfVideos: 1,
+        resolution: '720p',
+        aspectRatio: '16:9'
+      }
     });
 
     while (!operation.done) {
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        operation = await ai.operations.getVideosOperation({operation: operation});
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      operation = await ai.operations.getVideosOperation({operation: operation});
     }
 
     const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
@@ -240,7 +177,42 @@ export const generateMemoryVideo = async (sceneDescription: string): Promise<{bl
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     const response = await fetch(`${videoUri}&key=${apiKey}`);
     if (!response.ok) throw new Error("Failed to download video");
-    
+
     const blob = await response.blob();
     return { blob, mimeType: 'video/mp4' };
+  }
 }
+
+// Legacy exports for backward compatibility
+const getAI = () => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) return null;
+  return new GoogleGenAI({ apiKey });
+}
+
+export const getPAOSuggestions = async (
+  number: number,
+  theme: string,
+  specificPerson?: string,
+  strictMode: boolean = false
+): Promise<Suggestion[]> => {
+  const provider = new GeminiProvider(import.meta.env.VITE_GEMINI_API_KEY);
+  return provider.generatePAOSuggestions(number, theme, specificPerson, strictMode);
+};
+
+export const getSceneDescription = async (person: string, action: string, object: string): Promise<string> => {
+  const provider = new GeminiProvider(import.meta.env.VITE_GEMINI_API_KEY);
+  return provider.generateSceneDescription(person, action, object);
+};
+
+export const generateMemoryImage = async (sceneDescription: string): Promise<string> => {
+  const provider = new GeminiProvider(import.meta.env.VITE_GEMINI_API_KEY);
+  return provider.generateMemoryImage(sceneDescription);
+};
+
+export const generateMemoryVideo = async (sceneDescription: string): Promise<{blob: Blob, mimeType: string}> => {
+  const provider = new GeminiProvider(import.meta.env.VITE_GEMINI_API_KEY);
+  return provider.generateMemoryVideo(sceneDescription);
+};
+
+export { GeminiProvider };

@@ -1,0 +1,134 @@
+/**
+ * OpenAI LLM Provider Implementation
+ */
+
+import { Suggestion } from "../types";
+import { ILLMProvider } from "./llmTypes";
+import { getPhoneticsForNumber } from "../constants";
+import { sanitizeForAIPrompt } from "../utils/validation";
+import {
+  getPAOStrictPersonPrompt,
+  getPAOPersonPrompt,
+  getPAOThemePrompt,
+  getSceneDescriptionPrompt,
+  PAOPromptParams,
+  ScenePromptParams
+} from "./prompts";
+
+export class OpenAIProvider implements ILLMProvider {
+  private apiKey: string;
+  private model: string;
+  private baseUrl: string;
+
+  constructor(apiKey: string, model?: string, baseUrl?: string) {
+    this.apiKey = apiKey;
+    this.model = model || 'gpt-4o-mini';
+    this.baseUrl = baseUrl || 'https://api.openai.com/v1';
+  }
+
+  private async makeRequest(messages: Array<{role: string, content: string}>, jsonMode: boolean = false): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        model: this.model,
+        messages,
+        ...(jsonMode && { response_format: { type: 'json_object' } })
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content || '';
+  }
+
+  async generatePAOSuggestions(
+    number: number,
+    theme: string,
+    specificPerson?: string,
+    strictMode: boolean = false
+  ): Promise<Suggestion[]> {
+    const sanitizedTheme = sanitizeForAIPrompt(theme);
+    const sanitizedPerson = specificPerson ? sanitizeForAIPrompt(specificPerson) : undefined;
+
+    const phonetics = getPhoneticsForNumber(number);
+    const strNum = number.toString().padStart(2, '0');
+    const d1 = strNum[0];
+    const d2 = strNum[1];
+
+    const params: PAOPromptParams = {
+      number,
+      strNum,
+      d1,
+      d2,
+      phonetics,
+      theme: sanitizedTheme,
+      specificPerson: sanitizedPerson,
+      strictMode
+    };
+
+    let prompt = "";
+
+    if (sanitizedPerson && sanitizedPerson.trim().length > 0) {
+      if (strictMode) {
+        prompt = getPAOStrictPersonPrompt(params);
+      } else {
+        prompt = getPAOPersonPrompt(params);
+      }
+    } else {
+      prompt = getPAOThemePrompt(params);
+    }
+
+    const messages = [
+      {
+        role: 'system',
+        content: 'You are an expert in the Major System mnemonic technique. Always respond with valid JSON.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ];
+
+    const responseText = await this.makeRequest(messages, true);
+
+    try {
+      const parsed = JSON.parse(responseText);
+      return parsed.suggestions || [];
+    } catch (e) {
+      console.error("JSON Parse error", e);
+      return [];
+    }
+  }
+
+  async generateSceneDescription(person: string, action: string, object: string): Promise<string> {
+    const params: ScenePromptParams = {
+      person: sanitizeForAIPrompt(person),
+      action: sanitizeForAIPrompt(action),
+      object: sanitizeForAIPrompt(object)
+    };
+
+    const prompt = getSceneDescriptionPrompt(params);
+
+    const messages = [
+      {
+        role: 'system',
+        content: 'You are an expert Memory Palace coach specializing in creating vivid, memorable scenes.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ];
+
+    const responseText = await this.makeRequest(messages);
+    return responseText.trim() || `${person} is ${action} with ${object}.`;
+  }
+}
