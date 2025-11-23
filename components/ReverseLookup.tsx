@@ -27,17 +27,17 @@ export const ReverseLookup: React.FC<ReverseLookupProps> = ({ items, onAssign, o
   }, [input]);
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4 animate-in fade-in slide-in-from-bottom-4">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2 flex justify-center items-center gap-3">
-          <UserSearch className="text-indigo-400" /> Talent Scout
+    <div className="w-full mx-auto py-6 px-4 animate-in fade-in slide-in-from-bottom-4">
+      <div className="text-center mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex justify-center items-center gap-2 sm:gap-3">
+          <UserSearch className="text-indigo-400 w-6 h-6 sm:w-8 sm:h-8" /> Talent Scout
         </h2>
         <p className="text-slate-400">
           Run a screen test. Enter a character name to see which Major System roles they fit.
         </p>
       </div>
 
-      <div className="bg-slate-800/50 p-8 rounded-2xl border border-slate-700 shadow-xl relative overflow-hidden">
+      <div className="bg-slate-800/50 p-4 sm:p-8 rounded-2xl border border-slate-700 shadow-xl relative overflow-hidden">
         {/* Input Area */}
         <div className="relative mb-8">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -68,7 +68,7 @@ export const ReverseLookup: React.FC<ReverseLookupProps> = ({ items, onAssign, o
                                     {isInitials ? <Clapperboard size={14} /> : <Ear size={14} />}
                                     {isInitials ? 'Initials Mode' : 'Phonetic Mode'}
                                 </div>
-                                <div className="text-6xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-cyan-400 mb-4">
+                                <div className="text-5xl sm:text-6xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-cyan-400 mb-4">
                                     {formattedNumber}
                                 </div>
                                 <div className="text-slate-500 text-xs bg-slate-800 px-3 py-1.5 rounded-full font-mono border border-slate-700 flex items-center gap-2">

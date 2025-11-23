@@ -61,7 +61,7 @@ html, body {
 
 /* Front */
 .digit {
-  font-size: 140px;
+  font-size: clamp(80px, 20vw, 140px);
   font-weight: 900;
   background: linear-gradient(135deg, #34d399, #22d3ee);
   -webkit-background-clip: text;
@@ -176,12 +176,12 @@ html, body {
 
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 max-w-4xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 w-full mx-auto">
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-center md:text-left">
             <div>
-                <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 justify-center md:justify-start">
-                    <GraduationCap className="text-indigo-400" /> Major System Training
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3 justify-center md:justify-start">
+                    <GraduationCap className="text-indigo-400 w-6 h-6 sm:w-8 sm:h-8" /> Major System Training
                 </h2>
                 <p className="text-slate-400 max-w-xl">
                     Master the phonetic code that underpins the entire memory palace. 
@@ -193,9 +193,9 @@ html, body {
                     handleDownloadTXT();
                     setShowCsvHelp(true);
                 }}
-                className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95"
+                className="h-10 sm:h-12 px-4 sm:px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-sm sm:text-base font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 w-full md:w-auto"
             >
-                <Package size={20} />
+                <Package size={18} className="sm:w-5 sm:h-5" />
                 Export for Anki
             </button>
         </div>

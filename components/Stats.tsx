@@ -42,13 +42,13 @@ export const Stats: React.FC<StatsProps> = ({ items }) => {
   const PIE_COLORS = ['#4f46e5', '#1e293b'];
 
   return (
-    <div className="py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto">
+    <div className="py-6 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full mx-auto">
       
       <div className="text-center mb-4">
-        <h2 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-            <Clapperboard className="text-indigo-400" /> Production Analytics
+        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center justify-center gap-2">
+            <Clapperboard className="text-indigo-400 w-6 h-6 sm:w-8 sm:h-8" /> Production Analytics
         </h2>
-        <p className="text-slate-400">Studio Report: 00-99 Major System Status</p>
+        <p className="text-sm sm:text-base text-slate-400">Studio Report: 00-99 Major System Status</p>
       </div>
 
       {/* 1. Top Level Metrics Cards */}
@@ -79,9 +79,9 @@ export const Stats: React.FC<StatsProps> = ({ items }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* 2. Decade Distribution Chart */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                <LayoutGrid size={18} className="text-indigo-400" /> Decade Breakdown
+        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl">
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">
+                <LayoutGrid size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-400" /> Decade Breakdown
             </h3>
             <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -123,10 +123,10 @@ export const Stats: React.FC<StatsProps> = ({ items }) => {
         </div>
 
         {/* 3. Milestones & Pie */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow-xl flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <CheckCircle2 size={18} className="text-indigo-400" /> Director Rank
+        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+                    <CheckCircle2 size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-400" /> Director Rank
                 </h3>
                 {/* Mini Pie */}
                 <div className="w-16 h-16">
@@ -161,19 +161,19 @@ export const Stats: React.FC<StatsProps> = ({ items }) => {
       </div>
 
       {/* 4. The Matrix Heatmap */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow-xl">
-         <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <LayoutGrid size={18} className="text-indigo-400" /> The Matrix (00-99)
+      <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl">
+         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+                <LayoutGrid size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-400" /> The Matrix (00-99)
             </h3>
-            <div className="flex gap-3 text-xs">
-                <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-500"></div> Wrapped</div>
-                <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-500"></div> Casting</div>
-                <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-slate-700"></div> Empty</div>
+            <div className="flex gap-2 sm:gap-3 text-[10px] sm:text-xs">
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-emerald-500"></div> Wrapped</div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-amber-500"></div> Casting</div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-slate-700"></div> Empty</div>
             </div>
          </div>
          
-         <div className="grid grid-cols-10 gap-1.5 sm:gap-2">
+         <div className="grid grid-cols-10 gap-1 sm:gap-1.5 md:gap-2">
             {items.map((item) => {
                 let statusColor = 'bg-slate-700/50 hover:bg-slate-600';
                 if (item.completed) statusColor = 'bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
@@ -182,7 +182,7 @@ export const Stats: React.FC<StatsProps> = ({ items }) => {
                 return (
                     <div 
                         key={item.number}
-                        className={`aspect-square rounded-md flex items-center justify-center text-[10px] sm:text-xs font-mono font-bold text-white cursor-help transition-all duration-300 group relative ${statusColor}`}
+                        className={`aspect-square rounded-sm sm:rounded-md flex items-center justify-center text-[9px] sm:text-[10px] md:text-xs font-mono font-bold text-white cursor-help transition-all duration-300 group relative ${statusColor}`}
                     >
                         {item.number.toString().padStart(2, '0')}
                         

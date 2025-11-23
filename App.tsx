@@ -67,18 +67,18 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen flex flex-col max-w-4xl mx-auto bg-slate-900 text-slate-50">
+      <div className="min-h-screen flex flex-col w-full bg-slate-900 text-slate-50">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-4 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-500/20 transform -rotate-6 transition-transform hover:rotate-0">
-            <Clapperboard className="w-6 h-6 text-white" />
+      <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-3 sm:p-4 flex items-center justify-between shadow-lg w-full">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="bg-indigo-600 p-1.5 sm:p-2 rounded-xl shadow-lg shadow-indigo-500/20 transform -rotate-6 transition-transform hover:rotate-0">
+            <Clapperboard className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+            <h1 className="text-lg sm:text-xl font-black tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
               MemoDirector
             </h1>
-            <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">Cast &bull; Direct &bull; Remember</p>
+            <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono tracking-widest uppercase hidden xs:block">Cast &bull; Direct &bull; Remember</p>
           </div>
         </div>
         
@@ -105,47 +105,47 @@ export default function App() {
             </div>
         </div>
         
-        <div className="flex gap-1 bg-slate-800 p-1 rounded-lg">
+        <div className="flex gap-0.5 sm:gap-1 bg-slate-800 p-0.5 sm:p-1 rounded-lg flex-shrink-0">
           <button 
             onClick={() => setActiveTab(Tab.GRID)}
-            className={`p-2 rounded-md transition-all ${activeTab === Tab.GRID ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+            className={`p-1.5 sm:p-2 rounded-md transition-all ${activeTab === Tab.GRID ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
             title="Studio Grid"
           >
-            <Grid size={20} />
+            <Grid size={18} className="sm:w-5 sm:h-5" />
           </button>
           <button 
             onClick={() => setActiveTab(Tab.REVERSE)}
-            className={`p-2 rounded-md transition-all ${activeTab === Tab.REVERSE ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+            className={`p-1.5 sm:p-2 rounded-md transition-all ${activeTab === Tab.REVERSE ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
             title="Casting Search"
           >
-            <Search size={20} />
+            <Search size={18} className="sm:w-5 sm:h-5" />
           </button>
            <button 
             onClick={() => setActiveTab(Tab.SYSTEM)}
-            className={`p-2 rounded-md transition-all ${activeTab === Tab.SYSTEM ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+            className={`p-1.5 sm:p-2 rounded-md transition-all ${activeTab === Tab.SYSTEM ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
             title="Learn Major System"
           >
-            <BookOpen size={20} />
+            <BookOpen size={18} className="sm:w-5 sm:h-5" />
           </button>
           <button 
             onClick={() => setActiveTab(Tab.STATS)}
-            className={`p-2 rounded-md transition-all ${activeTab === Tab.STATS ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+            className={`p-1.5 sm:p-2 rounded-md transition-all ${activeTab === Tab.STATS ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
             title="Production Stats"
           >
-            <Settings size={20} /> 
+            <Settings size={18} className="sm:w-5 sm:h-5" /> 
           </button>
           <button 
             onClick={() => setActiveTab(Tab.EXPORT)}
-            className={`p-2 rounded-md transition-all ${activeTab === Tab.EXPORT ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+            className={`p-1.5 sm:p-2 rounded-md transition-all ${activeTab === Tab.EXPORT ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
             title="Distribution (Export)"
           >
-            <Download size={20} />
+            <Download size={18} className="sm:w-5 sm:h-5" />
           </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 overflow-y-auto">
+      <main className="flex-1 p-4 overflow-y-auto overflow-x-hidden max-w-7xl mx-auto w-full">
         {loading ? (
           <div className="h-64 flex flex-col items-center justify-center text-slate-500 animate-pulse">
             <Loader2 className="w-8 h-8 animate-spin mb-2" />

@@ -344,13 +344,13 @@ html, body {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 w-full">
       
       {/* Top Section: Title & Download */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-slate-700 shadow-xl">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-1">Anki Export</h2>
-          <p className="text-slate-400 text-sm">
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">Anki Export</h2>
+          <p className="text-slate-400 text-xs sm:text-sm">
             {completedItems.length > 0 
               ? `Ready to export ${completedItems.length} cards.` 
               : "Complete some PAO items to enable export."}
@@ -362,10 +362,10 @@ html, body {
                 setShowTutorial(true);
             }}
             disabled={completedItems.length === 0}
-            className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-10 sm:h-12 px-4 sm:px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-sm sm:text-base font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
             title="Export Anki Deck"
         >
-            <Download size={20} /> Export for Anki
+            <Download size={18} className="sm:w-5 sm:h-5" /> Export for Anki
         </button>
       </div>
 
