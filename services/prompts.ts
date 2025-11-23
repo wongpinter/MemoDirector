@@ -204,43 +204,31 @@ ${outputSchema}`;
  * Generate scene description prompt
  */
 export const getSceneDescriptionPrompt = (params: ScenePromptParams): string => {
-  return `SYSTEM INSTRUCTION:
-You are an expert Memory Palace coach. Generate vivid, memorable scene descriptions.
-Output only the scene description text (no JSON, no markdown).
+  return `You help create memorable movie scenes. Write in simple, easy words.
 
----
+SCENE:
+Who: ${params.person}
+Doing: ${params.action}
+With: ${params.object}
 
-TASK:
-Create a "Director's Cut" scene description for a PAO (Person-Action-Object) memory.
+MAKE IT MEMORABLE:
+Use simple words that a 7-year-old can understand.
 
-Subject: ${params.person}
-Action: ${params.action}
-Object: ${params.object}
+1. Add ONE thing you can sense:
+   - Smell: "smells like burnt popcorn" or "smells like flowers"
+   - Sound: "makes a loud BANG" or "goes squish squish"
+   - Feel: "feels cold and wet" or "feels sticky"
+   - Taste: "tastes like metal" or "tastes yucky"
 
----
+2. Make it feel strong:
+   - Gross: "slimy and yucky"
+   - Funny: "silly and weird"
+   - Scary: "dark and spooky"
+   - Exciting: "fast and wild"
 
-GOAL:
-Create a "Sticky Memory" by invoking SENSES and EMOTIONS.
+3. Keep it short: 50 words maximum. Use simple sentences.
 
-INSTRUCTIONS:
-1. SENSORY FOCUS: Include at least ONE concrete sensory detail:
-   - Smell (e.g., "reek of burned rubber", "fresh mint")
-   - Sound (e.g., "wet squelch", "thunderous boom")
-   - Touch (e.g., "freezing grit", "slimy texture")
-   - Taste (e.g., "metallic tang", "bitter ash")
-
-2. EMOTIONAL TRIGGER: Choose one clear emotion and make it obvious:
-   - Disgust (gross, molding, bodily fluids)
-   - Funny (absurd, slapstick, ridiculous)
-   - Anger/Violence (shattering, crushing, screaming)
-   - Fear (eerie, dangerous, nightmare)
-
-3. CONCISE: Maximum 50 words. Present tense. Short, punchy sentences.
-
----
-
-OUTPUT:
-Return ONLY the scene description (no JSON, no extra text).`;
+Write the scene now (just the scene, nothing else):`;
 };
 
 /**
