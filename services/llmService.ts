@@ -52,6 +52,10 @@ export const getPAOSuggestions = async (
   specificPerson?: string,
   strictMode: boolean = false
 ): Promise<Suggestion[]> => {
+  const config = getLLMConfig();
+  console.log('🤖 LLM Provider:', config.provider, '| Model:', config.model);
+  console.log('📝 PAO Request:', { number, theme, specificPerson, strictMode });
+  
   const provider = getLLMProvider();
   return provider.generatePAOSuggestions(number, theme, specificPerson, strictMode);
 };
@@ -64,6 +68,10 @@ export const getSceneDescription = async (
   action: string,
   object: string
 ): Promise<string> => {
+  const config = getLLMConfig();
+  console.log('🤖 LLM Provider:', config.provider, '| Model:', config.model);
+  console.log('🎬 Scene Request:', { person, action, object });
+  
   const provider = getLLMProvider();
   return provider.generateSceneDescription(person, action, object);
 };

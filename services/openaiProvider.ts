@@ -97,6 +97,8 @@ export class OpenAIProvider implements ILLMProvider {
       }
     ];
 
+    console.log('📤 [OpenAI] PAO Prompt:\n', prompt);
+
     const responseText = await this.makeRequest(messages, true);
 
     try {
@@ -127,6 +129,8 @@ export class OpenAIProvider implements ILLMProvider {
         content: prompt
       }
     ];
+
+    console.log('📤 [OpenAI] Scene Prompt:\n', prompt);
 
     const responseText = await this.makeRequest(messages);
     return responseText.trim() || `${person} is ${action} with ${object}.`;

@@ -86,6 +86,9 @@ export class OllamaProvider implements ILLMProvider {
     }
 
     const systemPrompt = 'You are an expert in the Major System mnemonic technique. Always respond with valid JSON.';
+    
+    console.log('📤 [Ollama] PAO Prompt:\n', prompt);
+    
     const responseText = await this.makeRequest(prompt, systemPrompt, true);
 
     try {
@@ -106,6 +109,8 @@ export class OllamaProvider implements ILLMProvider {
 
     const prompt = getSceneDescriptionPrompt(params);
     const systemPrompt = 'You are an expert Memory Palace coach specializing in creating vivid, memorable scenes.';
+
+    console.log('📤 [Ollama] Scene Prompt:\n', prompt);
 
     const responseText = await this.makeRequest(prompt, systemPrompt);
     return responseText.trim() || `${person} is ${action} with ${object}.`;

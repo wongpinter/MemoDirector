@@ -76,6 +76,8 @@ class GeminiProvider implements ILLMProvider {
       prompt = getPAOThemePrompt(params);
     }
 
+    console.log('📤 [Gemini] PAO Prompt:\n', prompt);
+
     const response = await ai.models.generateContent({
       model: this.model,
       contents: prompt,
@@ -107,6 +109,8 @@ class GeminiProvider implements ILLMProvider {
     };
 
     const prompt = getSceneDescriptionPrompt(params);
+
+    console.log('📤 [Gemini] Scene Prompt:\n', prompt);
 
     const response = await ai.models.generateContent({
       model: this.model,
