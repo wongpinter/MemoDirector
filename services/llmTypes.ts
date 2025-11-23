@@ -26,7 +26,8 @@ export interface ILLMProvider {
     number: number,
     theme: string,
     specificPerson?: string,
-    strictMode?: boolean
+    strictMode?: boolean,
+    excludePersons?: string[]
   ): Promise<Suggestion[]>;
 
   /**

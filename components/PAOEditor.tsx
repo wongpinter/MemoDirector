@@ -31,6 +31,7 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
   const [isGenMedia, setIsGenMedia] = useState<'image' | 'video' | null>(null);
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [excludedPersons, setExcludedPersons] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Validation State
@@ -121,8 +122,14 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
           number, 
           theme, 
           hasPersonInput ? person : undefined,
-          strictMode
+          strictMode,
+          excludedPersons
       );
+      
+      // Track the new persons to exclude them in future generations
+      const newPersons = results.map(s => s.person);
+      setExcludedPersons(prev => [...prev, ...newPersons]);
+      
       setSuggestions(results);
     } catch (e) {
       console.error("❌ PAO Generation Error:", e);
@@ -231,6 +238,12 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
     // Clear suggestions and any field errors since we filled them
     setSuggestions([]);
     setFieldErrors({});
+  };
+
+  const handleClearSuggestions = () => {
+    setSuggestions([]);
+    // Reset excluded persons when clearing suggestions
+    setExcludedPersons([]);
   };
 
   return (
@@ -364,7 +377,7 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
                         <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
                             {hasPersonInput ? `Auditioning for ${person}` : `Casting Call: ${theme}`}
                         </div>
-                        <button onClick={() => setSuggestions([])} className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                        <button onClick={handleClearSuggestions} className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
                             <X size={12} /> Clear
                         </button>
                     </div>

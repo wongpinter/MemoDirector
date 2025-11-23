@@ -41,7 +41,8 @@ class GeminiProvider implements ILLMProvider {
     number: number,
     theme: string,
     specificPerson?: string,
-    strictMode: boolean = false
+    strictMode: boolean = false,
+    excludePersons?: string[]
   ): Promise<Suggestion[]> {
     const ai = this.ensureAI();
 
@@ -62,7 +63,8 @@ class GeminiProvider implements ILLMProvider {
       phonetics,
       theme: sanitizedTheme,
       specificPerson: sanitizedPerson,
-      strictMode
+      strictMode,
+      excludePersons
     };
 
     let prompt = "";

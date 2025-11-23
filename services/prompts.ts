@@ -12,6 +12,7 @@ export interface PAOPromptParams {
   theme: string;
   specificPerson?: string;
   strictMode?: boolean;
+  excludePersons?: string[];
 }
 
 export interface ScenePromptParams {
@@ -118,6 +119,10 @@ export const getPAOThemePrompt = (params: PAOPromptParams): string => {
   const phoneticRules = getPhoneticRules(params);
   const outputSchema = getOutputSchema(true);
 
+  const excludeInstruction = params.excludePersons && params.excludePersons.length > 0
+    ? `\n\nIMPORTANT - DO NOT USE THESE PERSONS (already suggested):\n${params.excludePersons.map(p => `- ${p}`).join('\n')}\n\nGenerate DIFFERENT persons not in the above list.`
+    : '';
+
   if (params.strictMode) {
     return `${systemInstruction}
 
@@ -134,6 +139,7 @@ TASK:
 - OBJECT noun decodes to ${params.strNum}
 - person_description: 15 words maximum
 - notes: Explain phonetic decode for ALL THREE with reasoning (e.g., "Person 'Stitch': S(0)+T(1)=01. Action 'Stealing': S(0)+T(1)=01. Object 'Satellite': S(0)+T(1)=01.")
+${excludeInstruction}
 
 ${outputSchema}`;
   }
@@ -150,6 +156,7 @@ TASK:
 - ACTION and OBJECT: iconic and memorable for that person (phonetics optional)
 - person_description: 15 words maximum
 - notes: Explain phonetic decode with reasoning (e.g., "Stitch: S(0)+T(1)=01. S is the first consonant mapping to 0, T is the second mapping to 1.")
+${excludeInstruction}
 
 ${outputSchema}`;
 };

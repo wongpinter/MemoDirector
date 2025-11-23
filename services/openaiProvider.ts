@@ -58,7 +58,8 @@ export class OpenAIProvider implements ILLMProvider {
     number: number,
     theme: string,
     specificPerson?: string,
-    strictMode: boolean = false
+    strictMode: boolean = false,
+    excludePersons?: string[]
   ): Promise<Suggestion[]> {
     const sanitizedTheme = sanitizeForAIPrompt(theme);
     const sanitizedPerson = specificPerson ? sanitizeForAIPrompt(specificPerson) : undefined;
@@ -76,7 +77,8 @@ export class OpenAIProvider implements ILLMProvider {
       phonetics,
       theme: sanitizedTheme,
       specificPerson: sanitizedPerson,
-      strictMode
+      strictMode,
+      excludePersons
     };
 
     let prompt = "";

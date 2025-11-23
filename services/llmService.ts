@@ -50,14 +50,15 @@ export const getPAOSuggestions = async (
   number: number,
   theme: string,
   specificPerson?: string,
-  strictMode: boolean = false
+  strictMode: boolean = false,
+  excludePersons?: string[]
 ): Promise<Suggestion[]> => {
   const config = getLLMConfig();
   console.log('🤖 LLM Provider:', config.provider, '| Model:', config.model);
-  console.log('📝 PAO Request:', { number, theme, specificPerson, strictMode });
+  console.log('📝 PAO Request:', { number, theme, specificPerson, strictMode, excludePersons });
   
   const provider = getLLMProvider();
-  return provider.generatePAOSuggestions(number, theme, specificPerson, strictMode);
+  return provider.generatePAOSuggestions(number, theme, specificPerson, strictMode, excludePersons);
 };
 
 /**
