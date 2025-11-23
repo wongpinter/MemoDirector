@@ -119,7 +119,7 @@ export class OpenAIProvider implements ILLMProvider {
       return suggestions.map((s: Suggestion) => ({
         ...s,
         person_description: s.person_description 
-          ? enforceWordLimit(cleanLLMThinking(s.person_description), 8)
+          ? enforceWordLimit(cleanLLMThinking(s.person_description), 15)
           : s.person_description,
         notes: s.notes 
           ? cleanLLMThinking(s.notes)

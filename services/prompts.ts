@@ -43,7 +43,7 @@ const getSystemInstruction = (): string => {
   return `You are a Major System memory expert. Output valid JSON only.
 
 RULES:
-- person_description: Maximum 8 words
+- person_description: Maximum 15 words
 - notes: Show phonetic decode
 - Use clean, final text in all fields`;
 };
@@ -103,7 +103,7 @@ The notes field should explain the phonetic decode clearly.`;
       "person": "Person Name",
       "action": "Short iconic action",
       "object": "Short iconic object",
-      "person_description": "Max 8 words describing who they are"
+      "person_description": "Max 15 words describing who they are"
     }
   ]
 }`;
@@ -132,7 +132,7 @@ TASK:
 - PERSON name decodes to ${params.strNum}
 - ACTION verb decodes to ${params.strNum}
 - OBJECT noun decodes to ${params.strNum}
-- person_description: 8 words maximum
+- person_description: 15 words maximum
 - notes: Explain phonetic decode for ALL THREE with reasoning (e.g., "Person 'Stitch': S(0)+T(1)=01. Action 'Stealing': S(0)+T(1)=01. Object 'Satellite': S(0)+T(1)=01.")
 
 ${outputSchema}`;
@@ -148,7 +148,7 @@ ${phoneticRules}
 TASK:
 - Generate 5 suggestions where PERSON name decodes to ${params.strNum}
 - ACTION and OBJECT: iconic and memorable for that person (phonetics optional)
-- person_description: 8 words maximum
+- person_description: 15 words maximum
 - notes: Explain phonetic decode with reasoning (e.g., "Stitch: S(0)+T(1)=01. S is the first consonant mapping to 0, T is the second mapping to 1.")
 
 ${outputSchema}`;
@@ -170,7 +170,7 @@ TASK:
 - Generate 5 iconic ACTION and OBJECT pairs
 - ACTION: what they're famous for doing
 - OBJECT: item they use or are associated with
-- person_description: 8 words maximum
+- person_description: 15 words maximum
 
 ${outputSchema}`;
 };
@@ -194,7 +194,7 @@ TASK:
 - Person: "${params.specificPerson}" (exact match, user selected)
 - ACTION verb must decode to ${params.strNum} using Major System
 - OBJECT noun must decode to ${params.strNum} using Major System
-- person_description: 8 words maximum
+- person_description: 15 words maximum
 - notes: Explain phonetic decode for Action and Object with reasoning (e.g., "Action 'Stealing': S(0)+T(1)=01. Object 'Satellite': S(0)+T(1)=01. Both decode to 01.")
 
 ${outputSchema}`;
