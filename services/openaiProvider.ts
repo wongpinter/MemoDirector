@@ -104,11 +104,16 @@ export class OpenAIProvider implements ILLMProvider {
 
     console.log('📤 [OpenAI] PAO Prompt:\n', prompt);
 
-    const responseText = await this.makeRequest(messages, true);
-
     try {
+      const responseText = await this.makeRequest(messages, true);
+      console.log('📥 [OpenAI] Raw Response:', responseText.substring(0, 500));
+
       const parsed = JSON.parse(responseText);
       const suggestions = parsed.suggestions || [];
+      
+      if (suggestions.length === 0) {
+        console.warn('⚠️ [OpenAI] No suggestions returned');
+      }
       
       // Clean up thinking text from person_description
       return suggestions.map((s: Suggestion) => ({
@@ -121,8 +126,11 @@ export class OpenAIProvider implements ILLMProvider {
           : s.notes
       }));
     } catch (e) {
-      console.error("JSON Parse error", e);
-      return [];
+      console.error("❌ [OpenAI] Error:", e);
+      if (e instanceof Error) {
+        throw new Error(`OpenAI failed: ${e.message}`);
+      }
+      throw new Error('OpenAI request failed. Check console for details.');
     }
   }
 

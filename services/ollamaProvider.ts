@@ -94,11 +94,16 @@ export class OllamaProvider implements ILLMProvider {
     
     console.log('📤 [Ollama] PAO Prompt:\n', prompt);
     
-    const responseText = await this.makeRequest(prompt, systemPrompt, true);
-
     try {
+      const responseText = await this.makeRequest(prompt, systemPrompt, true);
+      console.log('📥 [Ollama] Raw Response:', responseText.substring(0, 500));
+
       const parsed = JSON.parse(responseText);
       const suggestions = parsed.suggestions || [];
+      
+      if (suggestions.length === 0) {
+        console.warn('⚠️ [Ollama] No suggestions returned');
+      }
       
       // Clean up thinking text from person_description
       return suggestions.map((s: Suggestion) => ({
@@ -111,8 +116,11 @@ export class OllamaProvider implements ILLMProvider {
           : s.notes
       }));
     } catch (e) {
-      console.error("JSON Parse error", e);
-      return [];
+      console.error("❌ [Ollama] Error:", e);
+      if (e instanceof Error) {
+        throw new Error(`Ollama failed: ${e.message}`);
+      }
+      throw new Error('Ollama request failed. Check console for details.');
     }
   }
 

@@ -40,28 +40,40 @@ const DIGIT_SOUNDS: Record<string, string> = {
  * System instruction header
  */
 const getSystemInstruction = (): string => {
-  return `SYSTEM INSTRUCTION:
-You output machine-readable JSON only. No markdown, no code fences, no explanations outside JSON.
-If you cannot produce 5 valid suggestions, output the ones you can and include an "explanation" field.
+  return `You are a Major System memory expert. Output valid JSON only.
 
-CRITICAL RULES:
-- person_description field MUST be 8 words or less. Be concise.
-- DO NOT include thinking process, word counts, or meta-commentary in your output.
-- Output ONLY the final answer in each field, not your reasoning about it.`;
+RULES:
+- person_description: Maximum 8 words
+- notes: Show phonetic decode
+- Use clean, final text in all fields`;
 };
 
 /**
  * Generate phonetic rules instruction block
  */
 export const getPhoneticRules = (params: PAOPromptParams): string => {
-  return `PHONETIC RULES FOR ${params.strNum}:
-- The PERSON'S NAME must match Major System digits:
-  - ${params.d1} = ${DIGIT_SOUNDS[params.d1]}
-  - ${params.d2} = ${DIGIT_SOUNDS[params.d2]}
-- The first consonant sound must correspond to digit ${params.d1}.
-- The next consonant sound must correspond to digit ${params.d2}.
-- Vowels (a, e, i, o, u) and w, h, y are ignored.
-- Initials are allowed IF the spoken initial phonetics decode to ${params.strNum}.`;
+  return `TARGET: ${params.strNum}
+
+MAJOR SYSTEM MAPPING:
+- First sound: ${params.d1} = ${DIGIT_SOUNDS[params.d1]}
+- Second sound: ${params.d2} = ${DIGIT_SOUNDS[params.d2]}
+- Vowels (a,e,i,o,u,w,h,y) are silent
+- Use first two consonant sounds from the name
+
+NOTES FIELD - PHONETIC DECODE EXPLANATION:
+The notes field explains HOW the name decodes to ${params.strNum}.
+Show the reasoning step by step:
+1. Identify the first two consonant sounds in the name
+2. Map each consonant to its digit using Major System
+3. Format: "Letter(digit)+Letter(digit)=${params.strNum}"
+
+Examples:
+- "Stitch" → First consonant is S (digit 0), second is T (digit 1) → "S(0)+T(1)=01"
+- "Tony" → First consonant is T (digit 1), second is N (digit 2) → "T(1)+N(2)=12"
+- "Syd" → First consonant is S (digit 0), second is D (digit 1) → "S(0)+D(1)=01"
+- "Buzz Lightyear" → B (digit 9), Z (digit 0) → "B(9)+Z(0)=90"
+
+The notes field helps users understand the phonetic logic.`;
 };
 
 /**
@@ -69,18 +81,20 @@ export const getPhoneticRules = (params: PAOPromptParams): string => {
  */
 const getOutputSchema = (includeNotes: boolean = true): string => {
   if (includeNotes) {
-    return `OUTPUT SCHEMA (EXACT):
+    return `EXAMPLE OUTPUT:
 {
   "suggestions": [
     {
-      "person": "Person Name",
-      "action": "Short iconic action",
-      "object": "Short iconic object",
-      "person_description": "Max 8 words (e.g., 'Wizard from Harry Potter')",
-      "notes": "Phonetic decode (e.g., 'S(0) + D(1) = 01')"
+      "person": "Stitch",
+      "action": "Experimenting",
+      "object": "Ukulele",
+      "person_description": "Alien experiment 626 from Lilo and Stitch",
+      "notes": "Stitch: S(0)+T(1)=01. First consonant S maps to 0, second consonant T maps to 1."
     }
   ]
-}`;
+}
+
+The notes field should explain the phonetic decode clearly.`;
   } else {
     return `OUTPUT SCHEMA (EXACT):
 {
@@ -104,36 +118,40 @@ export const getPAOThemePrompt = (params: PAOPromptParams): string => {
   const phoneticRules = getPhoneticRules(params);
   const outputSchema = getOutputSchema(true);
 
-  return `${systemInstruction}
+  if (params.strictMode) {
+    return `${systemInstruction}
 
----
-
-TASK:
-Generate Person-Action-Object (PAO) suggestions using the Major System.
-Target Number: ${params.strNum}
+Generate PAO (Person-Action-Object) memory suggestions.
 Theme: ${params.theme || 'General / Famous People'}
-
----
+STRICT MODE: ALL three components (Person, Action, Object) must decode to ${params.strNum}
 
 ${phoneticRules}
 
----
+TASK:
+- Generate 5 suggestions where ALL THREE decode to ${params.strNum}
+- PERSON name decodes to ${params.strNum}
+- ACTION verb decodes to ${params.strNum}
+- OBJECT noun decodes to ${params.strNum}
+- person_description: 8 words maximum
+- notes: Explain phonetic decode for ALL THREE with reasoning (e.g., "Person 'Stitch': S(0)+T(1)=01. Action 'Stealing': S(0)+T(1)=01. Object 'Satellite': S(0)+T(1)=01.")
 
-REQUIREMENTS:
-1. Generate 5 PAO suggestions where the PERSON'S NAME decodes to ${params.strNum}.
-2. ACTION and OBJECT must be iconic, visual, and strongly associated with that person.
-3. ACTION and OBJECT do NOT need to follow phonetics${params.strictMode ? ' (STRICT MODE: but should if possible)' : ''}.
-4. Avoid generic verbs/nouns (no "walk", "bag").
-5. Maintain thematic consistency.
-6. person_description: MAXIMUM 8 WORDS describing who the person is.
-7. notes: Short phonetic explanation (e.g., "S(0) + D(1) = 01").
-8. Use the **exact schema** below.
+${outputSchema}`;
+  }
 
----
+  return `${systemInstruction}
 
-${outputSchema}
+Generate PAO (Person-Action-Object) memory suggestions.
+Theme: ${params.theme || 'General / Famous People'}
 
-Return ONLY valid JSON following the schema.`;
+${phoneticRules}
+
+TASK:
+- Generate 5 suggestions where PERSON name decodes to ${params.strNum}
+- ACTION and OBJECT: iconic and memorable for that person (phonetics optional)
+- person_description: 8 words maximum
+- notes: Explain phonetic decode with reasoning (e.g., "Stitch: S(0)+T(1)=01. S is the first consonant mapping to 0, T is the second mapping to 1.")
+
+${outputSchema}`;
 };
 
 /**
@@ -145,29 +163,16 @@ export const getPAOPersonPrompt = (params: PAOPromptParams): string => {
 
   return `${systemInstruction}
 
----
+Generate Action-Object pairs for: "${params.specificPerson}"
 
 TASK:
-Generate Action-Object pairs for a specific character.
-User Selected Character: "${params.specificPerson}"
+- Person: "${params.specificPerson}" (exact match)
+- Generate 5 iconic ACTION and OBJECT pairs
+- ACTION: what they're famous for doing
+- OBJECT: item they use or are associated with
+- person_description: 8 words maximum
 
----
-
-REQUIREMENTS:
-1. The 'person' field MUST be exactly "${params.specificPerson}".
-2. Generate 5 distinct Action and Object pairs that are ICONIC to this character.
-3. ACTION must be something the character is famous for doing.
-4. OBJECT must be an item/tool/weapon they frequently use or are strongly associated with.
-5. IGNORE phonetic requirements for the Name (user already selected it).
-6. Keep Action and Object short (3 words max each).
-7. person_description: MAXIMUM 8 WORDS describing who they are.
-8. Use the **exact schema** below.
-
----
-
-${outputSchema}
-
-Return ONLY valid JSON following the schema.`;
+${outputSchema}`;
 };
 
 /**
@@ -180,33 +185,19 @@ export const getPAOStrictPersonPrompt = (params: PAOPromptParams): string => {
 
   return `${systemInstruction}
 
----
-
-TASK:
-Generate Action-Object pairs for a specific character with PHONETIC CONSTRAINTS.
-Target Number: ${params.strNum}
-User Selected Character: "${params.specificPerson}"
-
----
+Generate Action-Object pairs for: "${params.specificPerson}"
+STRICT MODE: Action and Object must BOTH decode to ${params.strNum}
 
 ${phoneticRules}
 
----
+TASK:
+- Person: "${params.specificPerson}" (exact match, user selected)
+- ACTION verb must decode to ${params.strNum} using Major System
+- OBJECT noun must decode to ${params.strNum} using Major System
+- person_description: 8 words maximum
+- notes: Explain phonetic decode for Action and Object with reasoning (e.g., "Action 'Stealing': S(0)+T(1)=01. Object 'Satellite': S(0)+T(1)=01. Both decode to 01.")
 
-STRICT REQUIREMENTS (Strict Mode Active):
-1. The 'person' field MUST be exactly "${params.specificPerson}".
-2. The ACTION verb MUST phonetically decode to ${params.strNum}.
-3. The OBJECT noun MUST phonetically decode to ${params.strNum}.
-4. Make them thematically relevant to the person if possible, but PHONETIC FIT is the absolute priority.
-5. person_description: MAXIMUM 8 WORDS describing who they are.
-6. notes: Explain how Action and Object decode to ${params.strNum}.
-7. Use the **exact schema** below.
-
----
-
-${outputSchema}
-
-Return ONLY valid JSON following the schema.`;
+${outputSchema}`;
 };
 
 /**

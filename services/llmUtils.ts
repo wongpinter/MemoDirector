@@ -3,14 +3,15 @@
  */
 
 /**
- * Default timeout for LLM requests (30 seconds)
+ * Default timeout for LLM requests (60 seconds)
+ * Increased to handle complex prompts with detailed phonetic rules
  */
-export const DEFAULT_LLM_TIMEOUT = 30000;
+export const DEFAULT_LLM_TIMEOUT = 60000;
 
 /**
- * Timeout for image generation (60 seconds)
+ * Timeout for image generation (90 seconds)
  */
-export const IMAGE_GENERATION_TIMEOUT = 60000;
+export const IMAGE_GENERATION_TIMEOUT = 90000;
 
 /**
  * Timeout for video generation (120 seconds)
@@ -82,7 +83,7 @@ export function cleanLLMThinking(text: string): string {
 
   // Remove thinking patterns
   const thinkingPatterns = [
-    /\(.*?words.*?\)/gi,                    // (6 words), (7 words - ok!)
+    /\(.*?\)/g,                             // Remove ALL parenthetical content
     /\bOk,?\s+that'?s?\s+\d+\s+words\.?/gi, // Ok, that's 6 words
     /\bWait,?\s+I\s+need\s+to\s+.+?\./gi,   // Wait, I need to check...
     /\bLet\s+me\s+.+?\./gi,                 // Let me rephrase...
@@ -93,6 +94,9 @@ export function cleanLLMThinking(text: string): string {
     /\bOkay,?\s+I'?ll\s+.+?\./gi,          // Okay, I'll stick to that
     /\bI'?m\s+overthinking\s+this\.?/gi,   // I'm overthinking this
     /\bNo!\s+\d+\s+words\.?/gi,            // No! 7 words
+    /\bPlease\s+do\s+not\s+include\s+.+?\./gi, // Please do not include...
+    /\bThis\s+is\s+a\s+mistake\s+.+?\./gi, // This is a mistake...
+    /\bI\s+am\s+making\s+a\s+mistake\s+.+?\./gi, // I am making a mistake...
   ];
 
   let cleaned = text;

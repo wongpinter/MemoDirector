@@ -92,11 +92,20 @@ class GeminiProvider implements ILLMProvider {
       'Gemini API request timed out. Please try again.'
     );
 
-    if (!response.text) return [];
+    if (!response.text) {
+      console.error('❌ [Gemini] Empty response');
+      throw new Error('Gemini returned empty response');
+    }
+
+    console.log('📥 [Gemini] Raw Response:', response.text.substring(0, 500));
 
     try {
       const parsed = JSON.parse(response.text);
       const suggestions = parsed.suggestions || [];
+      
+      if (suggestions.length === 0) {
+        console.warn('⚠️ [Gemini] No suggestions returned');
+      }
       
       // Clean up thinking text from person_description
       return suggestions.map((s: Suggestion) => ({
@@ -109,8 +118,9 @@ class GeminiProvider implements ILLMProvider {
           : s.notes
       }));
     } catch (e) {
-      console.error("JSON Parse error", e);
-      return [];
+      console.error("❌ [Gemini] JSON Parse error:", e);
+      console.error("❌ [Gemini] Response text:", response.text);
+      throw new Error(`Gemini returned invalid JSON: ${e instanceof Error ? e.message : 'Parse failed'}`);
     }
   }
 

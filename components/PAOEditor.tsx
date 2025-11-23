@@ -125,7 +125,9 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
       );
       setSuggestions(results);
     } catch (e) {
-      setError("Failed to get suggestions. Try again.");
+      console.error("❌ PAO Generation Error:", e);
+      const errorMsg = e instanceof Error ? e.message : "Failed to get suggestions. Try again.";
+      setError(errorMsg);
     } finally {
       setIsGenerating(false);
     }
@@ -382,8 +384,23 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
                                         </h4>
                                     </div>
                                     {(s.person_description || s.notes || s.reasoning) && (
-                                        <div className="mt-2 text-sm text-slate-400 italic leading-relaxed bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                                            {s.person_description || s.notes || s.reasoning}
+                                        <div className="mt-2 space-y-2">
+                                            {s.person_description && (
+                                                <div className="text-sm text-slate-400 italic leading-relaxed bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                                                    {s.person_description}
+                                                </div>
+                                            )}
+                                            {s.notes && (
+                                                <div className="text-xs text-indigo-400/80 font-mono bg-indigo-950/30 p-2 rounded border border-indigo-500/20 flex items-center gap-2">
+                                                    <Ear size={12} className="flex-shrink-0" />
+                                                    <span>{s.notes}</span>
+                                                </div>
+                                            )}
+                                            {!s.person_description && !s.notes && s.reasoning && (
+                                                <div className="text-sm text-slate-400 italic leading-relaxed bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                                                    {s.reasoning}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
