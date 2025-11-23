@@ -198,7 +198,7 @@ export default function App() {
                 />
             )}
             {activeTab === Tab.SYSTEM && <MajorSystemTrainer />}
-            {activeTab === Tab.STATS && <Stats items={items} />}
+            {activeTab === Tab.STATS && <Stats items={items} onSelect={(num) => setSelectedNumber(num)} />}
             {activeTab === Tab.EXPORT && <AnkiExport items={items} />}
           </>
         )}

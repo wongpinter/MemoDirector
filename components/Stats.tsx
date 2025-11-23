@@ -5,9 +5,10 @@ import { Trophy, AlertCircle, Film, CheckCircle2, LayoutGrid, Clapperboard } fro
 
 interface StatsProps {
   items: PAOItem[];
+  onSelect?: (number: number) => void;
 }
 
-export const Stats: React.FC<StatsProps> = ({ items }) => {
+export const Stats: React.FC<StatsProps> = ({ items, onSelect }) => {
   // --- Metrics Calculation ---
   const total = items.length;
   const completedCount = items.filter(i => i.completed).length;
@@ -182,7 +183,9 @@ export const Stats: React.FC<StatsProps> = ({ items }) => {
                 return (
                     <div 
                         key={item.number}
-                        className={`aspect-square rounded-sm sm:rounded-md flex items-center justify-center text-[9px] sm:text-[10px] md:text-xs font-mono font-bold text-white cursor-help transition-all duration-300 group relative ${statusColor}`}
+                        onClick={() => onSelect?.(item.number)}
+                        className={`aspect-square rounded-sm sm:rounded-md flex items-center justify-center text-[9px] sm:text-[10px] md:text-xs font-mono font-bold text-white cursor-pointer transition-all duration-300 group relative ${statusColor} hover:scale-110 active:scale-95`}
+                        title="Click to edit"
                     >
                         {item.number.toString().padStart(2, '0')}
                         
@@ -192,7 +195,7 @@ export const Stats: React.FC<StatsProps> = ({ items }) => {
                             {item.person ? (
                                 <div>{item.person}</div>
                             ) : (
-                                <div className="italic text-slate-500">Role Empty</div>
+                                <div className="italic text-slate-500">Click to add</div>
                             )}
                             {item.completed && <div className="text-emerald-400 text-[10px] mt-1 flex items-center gap-1"><CheckCircle2 size={10} /> Scene Ready</div>}
                         </div>
