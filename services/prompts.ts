@@ -42,7 +42,9 @@ const DIGIT_SOUNDS: Record<string, string> = {
 const getSystemInstruction = (): string => {
   return `SYSTEM INSTRUCTION:
 You output machine-readable JSON only. No markdown, no code fences, no explanations outside JSON.
-If you cannot produce 5 valid suggestions, output the ones you can and include an "explanation" field.`;
+If you cannot produce 5 valid suggestions, output the ones you can and include an "explanation" field.
+
+CRITICAL: person_description field MUST be 8 words or less. Be concise.`;
 };
 
 /**
@@ -71,8 +73,8 @@ const getOutputSchema = (includeNotes: boolean = true): string => {
       "person": "Person Name",
       "action": "Short iconic action",
       "object": "Short iconic object",
-      "person_description": "Who this person is (e.g., 'Wizard from Harry Potter', 'Bitcoin creator')",
-      "notes": "How the name decodes (e.g., 'S(0) + D(1) = 01')"
+      "person_description": "Max 8 words (e.g., 'Wizard from Harry Potter')",
+      "notes": "Phonetic decode (e.g., 'S(0) + D(1) = 01')"
     }
   ]
 }`;
@@ -84,7 +86,7 @@ const getOutputSchema = (includeNotes: boolean = true): string => {
       "person": "Person Name",
       "action": "Short iconic action",
       "object": "Short iconic object",
-      "person_description": "Who this person is and why action/object fit them"
+      "person_description": "Max 8 words describing who they are"
     }
   ]
 }`;
@@ -120,8 +122,8 @@ REQUIREMENTS:
 3. ACTION and OBJECT do NOT need to follow phonetics${params.strictMode ? ' (STRICT MODE: but should if possible)' : ''}.
 4. Avoid generic verbs/nouns (no "walk", "bag").
 5. Maintain thematic consistency.
-6. ALWAYS fill person_description with who the person is (1-5 words).
-7. ALWAYS fill notes with phonetic explanation (e.g., "S(0) + D(1) = 01").
+6. person_description: MAXIMUM 8 WORDS describing who the person is.
+7. notes: Short phonetic explanation (e.g., "S(0) + D(1) = 01").
 8. Use the **exact schema** below.
 
 ---
@@ -155,7 +157,7 @@ REQUIREMENTS:
 4. OBJECT must be an item/tool/weapon they frequently use or are strongly associated with.
 5. IGNORE phonetic requirements for the Name (user already selected it).
 6. Keep Action and Object short (3 words max each).
-7. ALWAYS fill person_description explaining who this character is and why the action/object fit.
+7. person_description: MAXIMUM 8 WORDS describing who they are.
 8. Use the **exact schema** below.
 
 ---
@@ -193,8 +195,8 @@ STRICT REQUIREMENTS (Strict Mode Active):
 2. The ACTION verb MUST phonetically decode to ${params.strNum}.
 3. The OBJECT noun MUST phonetically decode to ${params.strNum}.
 4. Make them thematically relevant to the person if possible, but PHONETIC FIT is the absolute priority.
-5. ALWAYS fill person_description with who this character is.
-6. ALWAYS fill notes explaining how Action and Object decode to ${params.strNum}.
+5. person_description: MAXIMUM 8 WORDS describing who they are.
+6. notes: Explain how Action and Object decode to ${params.strNum}.
 7. Use the **exact schema** below.
 
 ---
