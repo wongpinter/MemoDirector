@@ -19,6 +19,8 @@ export interface ScenePromptParams {
   person: string;
   action: string;
   object: string;
+  theme?: string;
+  personDescription?: string;
 }
 
 /**
@@ -211,12 +213,21 @@ ${outputSchema}`;
  * Generate scene description prompt
  */
 export const getSceneDescriptionPrompt = (params: ScenePromptParams): string => {
+  const themeContext = params.theme 
+    ? `\nCHARACTER THEME: ${params.theme}
+Keep the scene consistent with this theme's style, setting, and atmosphere.`
+    : '';
+  
+  const personContext = params.personDescription
+    ? `\nCHARACTER CONTEXT: ${params.personDescription}`
+    : '';
+
   return `Create a memorable scene using everyday words. Be descriptive and vivid.
 
 SCENE:
 Person: ${params.person}
 Action: ${params.action}
-Object: ${params.object}
+Object: ${params.object}${themeContext}${personContext}
 
 MAKE IT VIVID & EMOTIONAL:
 Write a scene that makes people FEEL something through their senses.
@@ -236,6 +247,7 @@ Make it emotional:
 - Scary: dark, dangerous, creepy
 
 Use everyday words. Be descriptive. Maximum 60 words.
+${themeContext ? '\nIMPORTANT: Reflect the theme\'s unique style and setting in your description.' : ''}
 
 Write the scene:`;
 };

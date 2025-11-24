@@ -126,11 +126,13 @@ export class OllamaProvider implements ILLMProvider {
     }
   }
 
-  async generateSceneDescription(person: string, action: string, object: string): Promise<string> {
+  async generateSceneDescription(person: string, action: string, object: string, theme?: string, personDescription?: string): Promise<string> {
     const params: ScenePromptParams = {
       person: sanitizeForAIPrompt(person),
       action: sanitizeForAIPrompt(action),
-      object: sanitizeForAIPrompt(object)
+      object: sanitizeForAIPrompt(object),
+      theme: theme ? sanitizeForAIPrompt(theme) : undefined,
+      personDescription: personDescription ? sanitizeForAIPrompt(personDescription) : undefined
     };
 
     const prompt = getSceneDescriptionPrompt(params);

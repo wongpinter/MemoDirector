@@ -36,7 +36,9 @@ export interface ILLMProvider {
   generateSceneDescription(
     person: string,
     action: string,
-    object: string
+    object: string,
+    theme?: string,
+    personDescription?: string
   ): Promise<string>;
 
   /**

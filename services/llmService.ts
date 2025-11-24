@@ -67,14 +67,16 @@ export const getPAOSuggestions = async (
 export const getSceneDescription = async (
   person: string,
   action: string,
-  object: string
+  object: string,
+  theme?: string,
+  personDescription?: string
 ): Promise<string> => {
   const config = getLLMConfig();
   console.log('🤖 LLM Provider:', config.provider, '| Model:', config.model);
-  console.log('🎬 Scene Request:', { person, action, object });
+  console.log('🎬 Scene Request:', { person, action, object, theme, personDescription });
   
   const provider = getLLMProvider();
-  return provider.generateSceneDescription(person, action, object);
+  return provider.generateSceneDescription(person, action, object, theme, personDescription);
 };
 
 /**

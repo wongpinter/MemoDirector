@@ -25,6 +25,7 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
   const [theme, setTheme] = useState(DEFAULT_THEMES[0]);
   const [isCustomTheme, setIsCustomTheme] = useState(false);
   const [customThemes, setCustomThemes] = useState<string[]>([]);
+  const [personDescription, setPersonDescription] = useState<string>('');
   
   const [strictMode, setStrictMode] = useState(false);
   
@@ -175,7 +176,7 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
      }
      setIsDirecting(true);
      try {
-         const desc = await getSceneDescription(person, action, object);
+         const desc = await getSceneDescription(person, action, object, theme, personDescription);
          setScene(desc);
      } catch (e) {
          setScene(`${person} is ${action} with ${object}.`);
@@ -259,6 +260,7 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
     setPerson(s.person);
     setAction(s.action);
     setObject(s.object);
+    setPersonDescription(s.person_description || '');
     // Clear suggestions and any field errors since we filled them
     setSuggestions([]);
     setFieldErrors({});
