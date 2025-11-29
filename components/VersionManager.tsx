@@ -220,9 +220,10 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
       )}
 
       {showCreateModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" style={{ zIndex: 9999 }} onClick={() => setShowCreateModal(false)}>
-          <div className="bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-bold text-slate-100 mb-4">Create New Version</h3>
+        <div className="fixed inset-0 overflow-y-auto bg-black/70 backdrop-blur-sm" style={{ zIndex: 9999 }} onClick={() => setShowCreateModal(false)}>
+          <div className="min-h-screen px-4 py-8 flex items-center justify-center">
+            <div className="bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-xl font-bold text-slate-100 mb-4">Create New Version</h3>
             <input
               type="text"
               value={newVersionName}
@@ -260,6 +261,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
               >
                 Cancel
               </button>
+            </div>
             </div>
           </div>
         </div>
