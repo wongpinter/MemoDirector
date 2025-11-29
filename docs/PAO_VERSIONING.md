@@ -216,11 +216,40 @@ getActiveVersion(): PAOVersion | null
 migrateToVersioning(existingItems: PAOItem[]): void
 ```
 
+## Integration with Stats Page
+
+The Statistics page has been updated to fully support versioning:
+
+### Version Selector
+- Dropdown menu to view stats for any version
+- Shows which version is currently active
+- Switch between versions to compare progress
+
+### Version Comparison Table
+When you have multiple versions, the Stats page displays a comparison table showing:
+- Version name and description
+- Completion count (X/100)
+- Progress percentage with visual bar
+- Number of items with scenes
+- Last modified date
+- Active version highlighted
+
+### Interactive Matrix
+- Click on any number in the matrix to edit (only for active version)
+- View-only mode when viewing non-active versions
+- Visual indicators show completion status per version
+
+### Features
+- All statistics (completion %, decade breakdown, milestones) update based on selected version
+- Compare progress across different PAO systems
+- Identify which versions need more work
+- Track completion trends over time
+
 ## Related Features
 
 - **Backup/Restore**: Export all versions or specific versions
 - **Sync System**: Automatic cloud backup of all versions
-- **Stats**: View completion stats per version
+- **Stats**: View completion stats per version with comparison table
 - **Anki Export**: Export specific version to Anki
 
 ## Support
