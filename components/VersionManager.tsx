@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { PAOVersion } from '../types';
 import {
   loadVersions,
@@ -219,13 +220,13 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
         </div>
       )}
 
-      {showCreateModal && (
+      {showCreateModal && createPortal(
         <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" 
-          style={{ zIndex: 9999 }} 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm overflow-y-auto z-[9999]" 
           onClick={() => setShowCreateModal(false)}
         >
-          <div className="bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 my-8" onClick={(e) => e.stopPropagation()}>
+          <div className="min-h-full flex items-center justify-center p-4 sm:p-6 md:p-8">
+            <div className="bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-slate-100 mb-4">Create New Version</h3>
             <input
               type="text"
@@ -265,8 +266,10 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
                 Cancel
               </button>
             </div>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
