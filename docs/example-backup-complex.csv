@@ -1,0 +1,5 @@
+Number,Person,Action,Object,Scene,ImageUrl,VideoUrl,Notes,Completed,LastModified
+0,"Sam Wilson",Soaring,Cape,"Sam Wilson soaring through the sky, his cape billowing behind him, wind rushing past",,,Phonetic: S/Z sound for 0,true,1732896000000
+1,"Tom Hanks",Typing,Typewriter,"Tom Hanks typing furiously on an old typewriter, papers flying everywhere, the sound of ""clack-clack-clack"" echoing",,,Phonetic: T/D sound for 1,true,1732896100000
+10,"Tony Stark",Testing,"Arc Reactor","Tony Stark in his workshop, testing a glowing blue arc reactor. Sparks fly, metal clangs, and he says ""Yeah, that'll work.""",,,Phonetic: T-S (1-0),true,1732896200000
+42,"Douglas Adams",Dreaming,Towel,"Douglas Adams dreaming about the number 42, wrapped in a towel, with the words ""Don't Panic"" floating above him in neon letters",,,The answer to life, the universe, and everything,true,1732896300000

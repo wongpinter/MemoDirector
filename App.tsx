@@ -19,7 +19,7 @@ enum Tab {
 }
 
 export default function App() {
-  const { items, loading, syncStatus, lastSyncTime, hasPendingSync, manualSync, updateItem } = usePAOData();
+  const { items, loading, syncStatus, lastSyncTime, hasPendingSync, manualSync, updateItem, updateItems } = usePAOData();
   const [activeTab, setActiveTab] = useState<Tab>(Tab.GRID);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [prefillPerson, setPrefillPerson] = useState<string | undefined>(undefined);
@@ -198,7 +198,7 @@ export default function App() {
                 />
             )}
             {activeTab === Tab.SYSTEM && <MajorSystemTrainer />}
-            {activeTab === Tab.STATS && <Stats items={items} onSelect={(num) => setSelectedNumber(num)} />}
+            {activeTab === Tab.STATS && <Stats items={items} onSelect={(num) => setSelectedNumber(num)} onRestore={updateItems} />}
             {activeTab === Tab.EXPORT && <AnkiExport items={items} />}
           </>
         )}

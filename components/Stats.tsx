@@ -2,13 +2,15 @@ import React from 'react';
 import { PAOItem } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Trophy, AlertCircle, Film, CheckCircle2, LayoutGrid, Clapperboard } from 'lucide-react';
+import { BackupRestore } from './BackupRestore';
 
 interface StatsProps {
   items: PAOItem[];
   onSelect?: (number: number) => void;
+  onRestore?: (items: PAOItem[]) => void;
 }
 
-export const Stats: React.FC<StatsProps> = ({ items, onSelect }) => {
+export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
   // --- Metrics Calculation ---
   const total = items.length;
   const completedCount = items.filter(i => i.completed).length;
@@ -204,6 +206,13 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect }) => {
             })}
          </div>
       </div>
+
+      {/* 5. Backup & Restore Section */}
+      {onRestore && (
+        <div className="mt-8">
+          <BackupRestore items={items} onRestore={onRestore} />
+        </div>
+      )}
 
     </div>
   );

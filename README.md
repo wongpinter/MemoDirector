@@ -11,6 +11,7 @@ It leverages **Google Gemini AI** to automatically suggest characters, actions, 
 *   **Director's Cut:** AI generation of vivid, multi-sensory scenes to aid memory retention.
 *   **Talent Scout (Reverse Lookup):** Type a character name (e.g., "Tony Stark") to see if they fit better as #10 (Initials T-S) or #12 (Phonetic T-N).
 *   **Anki Export:** Export your deck to `.apkg` format for spaced repetition practice.
+*   **Backup & Restore:** Export your PAO data to CSV format and restore from backups with smart merge strategies.
 *   **LocalStorage-First Sync:** ⚡ Instant saves to your device with automatic cloud backup every 30 seconds.
 *   **Offline Support:** Works completely offline - sync happens automatically when you're back online.
 *   **Manual Sync Control:** Force immediate cloud backup with the sync button in the header.
@@ -110,7 +111,8 @@ The app is automatically deployed to Firebase Hosting when changes are pushed to
 For detailed documentation, development guides, and project status reports, see the [docs](docs/) directory:
 
 - [Quick Start Guide](docs/QUICK_START.md)
-- [Sync Strategy](docs/SYNC_STRATEGY.md) - **NEW!** Learn about LocalStorage-first sync
+- [Backup & Restore Guide](docs/BACKUP_RESTORE.md) - **NEW!** Export and restore your PAO data
+- [Sync Strategy](docs/SYNC_STRATEGY.md) - Learn about LocalStorage-first sync
 - [Sync Migration Guide](docs/SYNC_MIGRATION.md) - What changed and how to use it
 - [Deployment Guide](docs/DEPLOYMENT.md)
 - [Refactoring Guide](docs/REFACTORING_GUIDE.md)
