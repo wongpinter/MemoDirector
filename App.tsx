@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Grid, Settings, Download, Clapperboard, Loader2, Search, Check, BookOpen, Cloud, CloudOff, RefreshCw, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Grid, Settings, Download, Clapperboard, Loader2, Search, Check, BookOpen, Cloud, CloudOff, RefreshCw, Clock, User as UserIcon, LogIn } from 'lucide-react';
 import { PAOGrid } from './components/PAOGrid';
 import { Stats } from './components/Stats';
 import { AnkiExport } from './components/AnkiExport';
@@ -7,9 +7,13 @@ import { ReverseLookup } from './components/ReverseLookup';
 import { PAOEditor } from './components/PAOEditor';
 import { MajorSystemTrainer } from './components/MajorSystemTrainer';
 import { VersionManager } from './components/VersionManager';
+import { AuthModal } from './components/AuthModal';
+import { UserProfile } from './components/UserProfile';
 import { PAOItem } from './types';
 import { usePAOData } from './hooks';
 import { ToastProvider } from './contexts';
+import { initializeAuth, onAuthChange, isAuthenticated, getUserDisplayName } from './services/auth';
+import { User } from 'firebase/auth';
 
 enum Tab {
   GRID = 'GRID',
@@ -24,9 +28,31 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.GRID);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [prefillPerson, setPrefillPerson] = useState<string | undefined>(undefined);
+  const [user, setUser] = useState<User | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Initialize auth and listen for changes
+  useEffect(() => {
+    initializeAuth();
+    const unsubscribe = onAuthChange((user) => {
+      setUser(user);
+    });
+    return unsubscribe;
+  }, []);
 
   const handleVersionSwitch = () => {
     reloadActiveVersion();
+  };
+
+  const handleAuthSuccess = () => {
+    // Reload data after authentication
+    window.location.reload();
+  };
+
+  const handleSignOut = () => {
+    // Reload app after sign out
+    window.location.reload();
   };
 
   const handleReverseAssign = (number: number, name: string) => {
@@ -141,6 +167,27 @@ export default function App() {
             >
                 <RefreshCw size={16} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
             </button>
+
+            {/* Auth/Profile Button */}
+            {isAuthenticated() ? (
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="p-1.5 sm:p-2 rounded-md transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800 flex items-center gap-2"
+                title="Profile & Settings"
+              >
+                <UserIcon size={16} />
+                <span className="hidden md:inline text-xs">{getUserDisplayName()}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="p-1.5 sm:p-2 px-3 rounded-md transition-all bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2"
+                title="Sign In"
+              >
+                <LogIn size={16} />
+                <span className="hidden md:inline text-xs font-semibold">Sign In</span>
+              </button>
+            )}
         </div>
         
         <div className="flex gap-0.5 sm:gap-1 bg-slate-800 p-0.5 sm:p-1 rounded-lg flex-shrink-0">
@@ -223,6 +270,20 @@ export default function App() {
           allItems={items}
         />
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={handleAuthSuccess}
+      />
+
+      {/* User Profile Modal */}
+      <UserProfile
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        onSignOut={handleSignOut}
+      />
       </div>
     </ToastProvider>
   );

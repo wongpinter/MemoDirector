@@ -3,6 +3,7 @@ import { getFirestore, doc, getDoc, setDoc, Firestore, collection, getDocs, dele
 import { getStorage, ref, uploadString, getDownloadURL, FirebaseStorage } from 'firebase/storage';
 import { PAOItem, PAOVersion } from '../types';
 import { TOTAL_NUMBERS, STORAGE_KEYS } from '../constants';
+import { getCurrentUserId, isAnonymousMode } from './auth';
 
 // ------------------------------------------------------------------
 // FIREBASE CONFIG
@@ -60,10 +61,11 @@ const generateEmptyList = (): PAOItem[] => {
 };
 
 export const loadPAOList = async (): Promise<PAOItem[]> => {
-  // 1. Try Firebase
-  if (isFirebaseAvailable && db) {
+  // 1. Try Firebase (with user-specific path)
+  if (isFirebaseAvailable && db && !isAnonymousMode()) {
     try {
-      const docRef = doc(db, "users", "default_user", "pao", "list"); // simplified path for demo
+      const userId = getCurrentUserId();
+      const docRef = doc(db, "users", userId, "pao", "list");
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -86,9 +88,10 @@ export const loadPAOList = async (): Promise<PAOItem[]> => {
 
 export const savePAOList = async (items: PAOItem[]) => {
   // Only sync to Firebase (LocalStorage is handled by syncQueue)
-  if (isFirebaseAvailable && db) {
+  if (isFirebaseAvailable && db && !isAnonymousMode()) {
     try {
-      const docRef = doc(db, "users", "default_user", "pao", "list");
+      const userId = getCurrentUserId();
+      const docRef = doc(db, "users", userId, "pao", "list");
       await setDoc(docRef, { 
         items, 
         lastUpdated: Date.now() // Use timestamp instead of Date object
@@ -99,7 +102,7 @@ export const savePAOList = async (items: PAOItem[]) => {
       throw e; // Re-throw to let caller handle the error
     }
   } else {
-    console.log("ℹ️ Firebase not available, skipping cloud sync");
+    console.log("ℹ️ Firebase not available or anonymous mode, skipping cloud sync");
   }
 };
 
@@ -113,14 +116,15 @@ export const uploadMedia = async (
     base64Data: string,
     mimeType: string
 ): Promise<string | null> => {
-    if (!storage) {
-        console.warn("Firebase Storage not available. Cannot upload media.");
+    if (!storage || isAnonymousMode()) {
+        console.warn("Firebase Storage not available or anonymous mode. Cannot upload media.");
         return null;
     }
 
     try {
+        const userId = getCurrentUserId();
         const extension = type === 'image' ? 'png' : 'mp4';
-        const path = `users/default_user/pao/${number}_${type}_${Date.now()}.${extension}`;
+        const path = `users/${userId}/pao/${number}_${type}_${Date.now()}.${extension}`;
         const storageRef = ref(storage, path);
         
         // Strip metadata prefix if present (e.g. "data:image/png;base64,")
@@ -143,12 +147,13 @@ export const uploadMedia = async (
  * Load all versions from Firebase
  */
 export const loadVersions = async (): Promise<PAOVersion[]> => {
-  if (!isFirebaseAvailable || !db) {
+  if (!isFirebaseAvailable || !db || isAnonymousMode()) {
     return [];
   }
 
   try {
-    const versionsRef = collection(db, "users", "default_user", "pao_versions");
+    const userId = getCurrentUserId();
+    const versionsRef = collection(db, "users", userId, "pao_versions");
     const snapshot = await getDocs(versionsRef);
     
     const versions: PAOVersion[] = [];
@@ -167,13 +172,14 @@ export const loadVersions = async (): Promise<PAOVersion[]> => {
  * Save a version to Firebase
  */
 export const saveVersion = async (version: PAOVersion): Promise<void> => {
-  if (!isFirebaseAvailable || !db) {
-    console.log("ℹ️ Firebase not available, skipping version sync");
+  if (!isFirebaseAvailable || !db || isAnonymousMode()) {
+    console.log("ℹ️ Firebase not available or anonymous mode, skipping version sync");
     return;
   }
 
   try {
-    const versionRef = doc(db, "users", "default_user", "pao_versions", version.id);
+    const userId = getCurrentUserId();
+    const versionRef = doc(db, "users", userId, "pao_versions", version.id);
     await setDoc(versionRef, version);
     console.log(`✅ Saved version ${version.name} to Firebase`);
   } catch (e) {
@@ -186,12 +192,13 @@ export const saveVersion = async (version: PAOVersion): Promise<void> => {
  * Delete a version from Firebase
  */
 export const deleteVersionFromFirebase = async (versionId: string): Promise<void> => {
-  if (!isFirebaseAvailable || !db) {
+  if (!isFirebaseAvailable || !db || isAnonymousMode()) {
     return;
   }
 
   try {
-    const versionRef = doc(db, "users", "default_user", "pao_versions", versionId);
+    const userId = getCurrentUserId();
+    const versionRef = doc(db, "users", userId, "pao_versions", versionId);
     await deleteDoc(versionRef);
     console.log(`✅ Deleted version from Firebase`);
   } catch (e) {

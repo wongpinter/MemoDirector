@@ -3,6 +3,7 @@
  */
 
 import { Suggestion } from "../types";
+import { loadAPIKeys, getModelPreference, getDefaultModel, getPreferredProvider } from './apiKeys';
 
 export type LLMProvider = 'gemini' | 'openai' | 'openrouter' | 'ollama';
 
@@ -53,21 +54,91 @@ export interface ILLMProvider {
 }
 
 /**
- * Get LLM configuration from environment variables
+ * Get LLM configuration from local storage (user's API keys) or environment variables (fallback)
  */
 export const getLLMConfig = (): LLMConfig => {
-  // Check which provider is configured
+  // First, try to get keys from local storage (user-provided keys)
+  const localKeys = loadAPIKeys();
+  const preferredProvider = getPreferredProvider();
+  
+  // If user has set a preferred provider and it's available, use it
+  if (preferredProvider) {
+    if (preferredProvider === 'gemini' && localKeys.gemini) {
+      return {
+        provider: 'gemini',
+        apiKey: localKeys.gemini,
+        model: getModelPreference('gemini') || getDefaultModel('gemini')
+      };
+    }
+    if (preferredProvider === 'openai' && localKeys.openai) {
+      return {
+        provider: 'openai',
+        apiKey: localKeys.openai,
+        model: getModelPreference('openai') || getDefaultModel('openai')
+      };
+    }
+    if (preferredProvider === 'openrouter' && localKeys.openrouter) {
+      return {
+        provider: 'openrouter',
+        apiKey: localKeys.openrouter,
+        baseUrl: 'https://openrouter.ai/api/v1',
+        model: getModelPreference('openrouter') || getDefaultModel('openrouter')
+      };
+    }
+    if (preferredProvider === 'ollama' && localKeys.ollama) {
+      return {
+        provider: 'ollama',
+        baseUrl: localKeys.ollama.baseUrl,
+        model: localKeys.ollama.model
+      };
+    }
+  }
+  
+  // Fallback to priority order: Gemini > OpenAI > OpenRouter > Ollama
+  if (localKeys.gemini) {
+    return {
+      provider: 'gemini',
+      apiKey: localKeys.gemini,
+      model: getModelPreference('gemini') || getDefaultModel('gemini')
+    };
+  }
+
+  if (localKeys.openai) {
+    return {
+      provider: 'openai',
+      apiKey: localKeys.openai,
+      model: getModelPreference('openai') || getDefaultModel('openai')
+    };
+  }
+
+  if (localKeys.openrouter) {
+    return {
+      provider: 'openrouter',
+      apiKey: localKeys.openrouter,
+      baseUrl: 'https://openrouter.ai/api/v1',
+      model: getModelPreference('openrouter') || getDefaultModel('openrouter')
+    };
+  }
+
+  if (localKeys.ollama) {
+    return {
+      provider: 'ollama',
+      baseUrl: localKeys.ollama.baseUrl,
+      model: localKeys.ollama.model
+    };
+  }
+
+  // Fallback to environment variables (for backward compatibility during development)
   const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
   const openrouterKey = import.meta.env.VITE_OPENROUTER_API_KEY;
   const ollamaUrl = import.meta.env.VITE_OLLAMA_BASE_URL;
 
-  // Priority: Gemini > OpenAI > OpenRouter > Ollama
   if (geminiKey) {
     return {
       provider: 'gemini',
       apiKey: geminiKey,
-      model: import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash'
+      model: import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash-exp'
     };
   }
 
@@ -96,9 +167,6 @@ export const getLLMConfig = (): LLMConfig => {
     };
   }
 
-  // Default to Gemini (will throw error if no key)
-  return {
-    provider: 'gemini',
-    apiKey: geminiKey
-  };
+  // No API key configured
+  throw new Error('No AI provider configured. Please add your API key in Settings.');
 };
