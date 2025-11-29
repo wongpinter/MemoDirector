@@ -8,6 +8,8 @@ interface AnkiExportProps {
   items: PAOItem[];
 }
 
+type ExportType = 'complete' | 'minimalist';
+
 export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
   const [versions, setVersions] = useState<PAOVersion[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
@@ -15,6 +17,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [exportType, setExportType] = useState<ExportType>('complete');
 
   // Load versions on mount
   useEffect(() => {
@@ -249,6 +252,7 @@ html, body {
     return `${item.person} is ${item.action.toLowerCase()} with ${item.object.toLowerCase()}.`;
   };
 
+  // Complete export: front with hint, back with PAO + scene
   const generateFrontHtml = (item: PAOItem) => {
     const num = item.number.toString().padStart(2, '0');
     const ph = getPhoneticsForNumber(item.number);
@@ -295,7 +299,45 @@ html, body {
 </div>`;
   };
 
-  const handleDownloadTXT = () => {
+  // Minimalist export: front number only (no hint), back PAO only (no scene)
+  const generateMinimalistFrontHtml = (item: PAOItem) => {
+    const num = item.number.toString().padStart(2, '0');
+    return `
+<div class="flashcard-container">
+  <div class="front-wrapper">
+    <div class="front-number">${num}</div>
+  </div>
+</div>`;
+  };
+
+  const generateMinimalistBackHtml = (item: PAOItem) => {
+    const num = item.number.toString().padStart(2, '0');
+    
+    return `
+<div class="flashcard-container">
+  <div class="back-container">
+    <div class="header">
+      <span class="header-number">#${num}</span>
+    </div>
+    <div class="pao-list" style="margin-bottom: 0;">
+      <div class="pao-item person">
+        <span class="label">Person</span>
+        <div class="value">${item.person}</div>
+      </div>
+      <div class="pao-item action">
+        <span class="label">Action</span>
+        <div class="value">${item.action}</div>
+      </div>
+      <div class="pao-item object">
+        <span class="label">Object</span>
+        <div class="value">${item.object}</div>
+      </div>
+    </div>
+  </div>
+</div>`;
+  };
+
+  const handleDownloadTXT = (type: ExportType = 'complete') => {
     // Use Tab separator (Standard for Anki) to avoid conflicts with CSS semicolons and HTML attributes
     const sep = "\t";
     // Reordered Columns: Front HTML and Back HTML first, then metadata
@@ -308,9 +350,13 @@ html, body {
       // Prepare CSS - strip newlines/tabs for TSV safety
       const styleTag = `<style>${cardCSS.replace(/[\r\n\t]/g, ' ')}</style>`;
       
-      // Prepare Content - strip newlines/tabs for TSV safety
-      const frontHtml = generateFrontHtml(item).replace(/[\r\n\t]/g, ' ');
-      const backHtml = generateBackHtml(item).replace(/[\r\n\t]/g, ' ');
+      // Prepare Content based on export type - strip newlines/tabs for TSV safety
+      const frontHtml = type === 'minimalist' 
+        ? generateMinimalistFrontHtml(item).replace(/[\r\n\t]/g, ' ')
+        : generateFrontHtml(item).replace(/[\r\n\t]/g, ' ');
+      const backHtml = type === 'minimalist'
+        ? generateMinimalistBackHtml(item).replace(/[\r\n\t]/g, ' ')
+        : generateBackHtml(item).replace(/[\r\n\t]/g, ' ');
       
       // Combined (Inject CSS into the fields for the text export)
       const front = styleTag + frontHtml;
@@ -325,9 +371,10 @@ html, body {
     const link = document.createElement('a');
     link.href = url;
     
-    // Include version name in filename
+    // Include version name and export type in filename
     const versionName = selectedVersion?.name.toLowerCase().replace(/\s+/g, '_') || 'default';
-    link.setAttribute('download', `pao_deck_${versionName}.txt`);
+    const typeSuffix = type === 'minimalist' ? '_minimalist' : '';
+    link.setAttribute('download', `pao_deck_${versionName}${typeSuffix}.txt`);
     
     document.body.appendChild(link);
     link.click();
@@ -340,15 +387,41 @@ html, body {
   // Render preview content safely
   const renderPreviewContent = () => {
     if (!isFlipped) {
+      // Front card
       return (
         <div className="front-wrapper">
             <div className="front-number">{numStr}</div>
-            <div className="front-hint">{phonetics}</div>
+            {exportType === 'complete' && <div className="front-hint">{phonetics}</div>}
         </div>
       );
     }
-    const sceneText = getSceneText(activeItem);
+    
+    // Back card
+    if (exportType === 'minimalist') {
+      return (
+        <div className="back-container">
+          <div className="header">
+              <span className="header-number">#{numStr}</span>
+          </div>
+          <div className="pao-list" style={{ marginBottom: 0 }}>
+              <div className="pao-item person">
+              <span className="label">Person</span>
+              <div className="value">{activeItem.person}</div>
+              </div>
+              <div className="pao-item action">
+              <span className="label">Action</span>
+              <div className="value">{activeItem.action}</div>
+              </div>
+              <div className="pao-item object">
+              <span className="label">Object</span>
+              <div className="value">{activeItem.object}</div>
+              </div>
+          </div>
+        </div>
+      );
+    }
 
+    const sceneText = getSceneText(activeItem);
     return (
       <div className="back-container">
         <div className="header">
@@ -391,36 +464,76 @@ html, body {
                 : "Complete some PAO items to enable export."}
             </p>
           </div>
-          <button 
-              onClick={() => {
-                  handleDownloadTXT();
-                  setShowTutorial(true);
-              }}
-              disabled={completedItems.length === 0}
-              className="h-10 sm:h-12 px-4 sm:px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-sm sm:text-base font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
-              title="Export Anki Deck"
-          >
-              <Download size={18} className="sm:w-5 sm:h-5" /> Export for Anki
-          </button>
+          <div className="flex gap-2 w-full md:w-auto">
+            <button 
+                onClick={() => {
+                    handleDownloadTXT('complete');
+                    setShowTutorial(true);
+                }}
+                disabled={completedItems.length === 0}
+                className="h-10 sm:h-12 px-4 sm:px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-sm sm:text-base font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex-1 md:flex-initial"
+                title="Export complete deck with hints and scenes"
+            >
+                <Download size={18} className="sm:w-5 sm:h-5" /> Complete
+            </button>
+            <button 
+                onClick={() => {
+                    handleDownloadTXT('minimalist');
+                    setShowTutorial(true);
+                }}
+                disabled={completedItems.length === 0}
+                className="h-10 sm:h-12 px-4 sm:px-6 bg-slate-600 hover:bg-slate-500 text-white text-sm sm:text-base font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex-1 md:flex-initial"
+                title="Export minimalist deck (number only, PAO without scene)"
+            >
+                <Download size={18} className="sm:w-5 sm:h-5" /> Minimalist
+            </button>
+          </div>
         </div>
 
-        {/* Version Selector */}
-        {versions.length > 0 && (
-          <div className="flex items-center gap-3 pt-2 border-t border-slate-700">
-            <span className="text-sm text-slate-400 font-semibold">Export Version:</span>
-            <select
-              value={selectedVersionId || ''}
-              onChange={(e) => setSelectedVersionId(e.target.value)}
-              className="flex-1 md:flex-initial bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              {versions.map(version => (
-                <option key={version.id} value={version.id}>
-                  {version.name} {version.isActive ? '(Active)' : ''} - {version.items.filter(i => i.completed).length} cards
-                </option>
-              ))}
-            </select>
+        {/* Version Selector & Export Type */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-2 border-t border-slate-700">
+          {versions.length > 0 && (
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-sm text-slate-400 font-semibold">Version:</span>
+              <select
+                value={selectedVersionId || ''}
+                onChange={(e) => setSelectedVersionId(e.target.value)}
+                className="flex-1 md:flex-initial bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {versions.map(version => (
+                  <option key={version.id} value={version.id}>
+                    {version.name} {version.isActive ? '(Active)' : ''} - {version.items.filter(i => i.completed).length} cards
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-400 font-semibold">Preview:</span>
+            <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-600">
+              <button
+                onClick={() => setExportType('complete')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                  exportType === 'complete' 
+                    ? 'bg-indigo-600 text-white' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Complete
+              </button>
+              <button
+                onClick={() => setExportType('minimalist')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                  exportType === 'minimalist' 
+                    ? 'bg-slate-600 text-white' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Minimalist
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { PAOVersion } from '../types';
 import {
@@ -25,6 +25,8 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
   const [editingVersion, setEditingVersion] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const loadData = () => {
     setVersions(loadVersions());
@@ -104,18 +106,35 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
     });
   };
 
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 8, left: rect.left });
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div className="relative">
       <button 
+        ref={buttonRef}
         className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-slate-800 border-2 border-slate-700 rounded-lg cursor-pointer text-sm font-medium text-slate-200 transition-all hover:border-indigo-500 hover:bg-slate-750"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
       >
         <span className="text-base md:text-lg">📚</span>
         <span className="text-xs text-slate-500">{isOpen ? '▲' : '▼'}</span>
       </button>
 
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border-2 border-slate-700 rounded-xl shadow-2xl max-h-96 overflow-y-auto min-w-[280px]" style={{ zIndex: 9998 }}>
+      {isOpen && createPortal(
+        <div 
+          className="fixed inset-0 z-[9998]" 
+          onClick={() => setIsOpen(false)}
+        >
+          <div 
+            className="absolute bg-slate-800 border-2 border-slate-700 rounded-xl shadow-2xl max-h-96 overflow-y-auto min-w-[280px]"
+            style={{ top: dropdownPos.top, left: dropdownPos.left }}
+            onClick={(e) => e.stopPropagation()}
+          >
           <div className="p-2">
             {versions.map(version => (
               <div 
@@ -214,7 +233,9 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
           >
             + Create New Version
           </button>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {showCreateModal && createPortal(
