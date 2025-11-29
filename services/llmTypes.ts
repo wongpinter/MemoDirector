@@ -3,6 +3,7 @@
  */
 
 import { Suggestion } from "../types";
+import { loadAPIKeys, getModelPreference, getDefaultModel } from './apiKeys';
 
 export type LLMProvider = 'gemini' | 'openai' | 'openrouter' | 'ollama';
 
@@ -56,9 +57,6 @@ export interface ILLMProvider {
  * Get LLM configuration from local storage (user's API keys) or environment variables (fallback)
  */
 export const getLLMConfig = (): LLMConfig => {
-  // Import here to avoid circular dependency
-  const { loadAPIKeys, getModelPreference, getDefaultModel } = require('./apiKeys');
-  
   // First, try to get keys from local storage (user-provided keys)
   const localKeys = loadAPIKeys();
   
