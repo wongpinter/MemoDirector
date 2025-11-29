@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, LogOut, Mail, Calendar, Shield, Key, X } from 'lucide-react';
 import { getCurrentUser, signOut, getUserDisplayName, getUserEmail, isAnonymousMode } from '../services/auth';
 import { APIKeysSettings } from './APIKeysSettings';
+import { DataPull } from './DataPull';
 import { User as FirebaseUser } from 'firebase/auth';
 
 interface UserProfileProps {
@@ -154,6 +155,15 @@ export function UserProfile({ isOpen, onClose, onSignOut }: UserProfileProps) {
                         </ul>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Data Management Section */}
+                  <div className="mt-6 pt-6 border-t border-slate-700">
+                    <h3 className="text-sm font-semibold text-slate-100 mb-4">Data Management</h3>
+                    <DataPull onPullComplete={() => {
+                      // Optionally reload or refresh
+                      window.location.reload();
+                    }} />
                   </div>
 
                   {/* Sign Out Button */}

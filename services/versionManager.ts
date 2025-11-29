@@ -217,6 +217,33 @@ export function duplicateVersion(versionId: string, newName: string): PAOVersion
 }
 
 /**
+ * Create a default version from pulled data
+ * Used when pulling data from server for the first time
+ */
+export function createDefaultVersion(items: PAOItem[]): PAOVersion {
+  const versions = loadVersions();
+  
+  const defaultVersion: PAOVersion = {
+    id: generateVersionId(),
+    name: 'Default',
+    description: 'Pulled from server',
+    createdAt: Date.now(),
+    lastModified: Date.now(),
+    isActive: versions.length === 0, // Only active if no other versions exist
+    items
+  };
+  
+  versions.push(defaultVersion);
+  saveVersions(versions);
+  
+  if (defaultVersion.isActive) {
+    setActiveVersionId(defaultVersion.id);
+  }
+  
+  return defaultVersion;
+}
+
+/**
  * Migrate existing PAO data to versioning system
  * This should be called once to migrate old data
  */
