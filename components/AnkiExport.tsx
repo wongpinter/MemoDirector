@@ -1,17 +1,47 @@
-import React, { useState } from 'react';
-import { PAOItem } from '../types';
+import React, { useState, useEffect } from 'react';
+import { PAOItem, PAOVersion } from '../types';
 import { getPhoneticsForNumber } from '../constants';
 import { Download, Copy, FileText, ChevronLeft, ChevronRight, Rotate3D, BookOpen, Package } from 'lucide-react';
+import { loadVersions, getActiveVersion } from '../services/versionManager';
 
 interface AnkiExportProps {
   items: PAOItem[];
 }
 
 export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
-  const completedItems = items.filter(i => i.completed);
+  const [versions, setVersions] = useState<PAOVersion[]>([]);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [displayItems, setDisplayItems] = useState<PAOItem[]>(items);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+
+  // Load versions on mount
+  useEffect(() => {
+    const loadedVersions = loadVersions();
+    setVersions(loadedVersions);
+    
+    const active = getActiveVersion();
+    if (active) {
+      setSelectedVersionId(active.id);
+    }
+  }, []);
+
+  // Update display items when selection changes
+  useEffect(() => {
+    if (selectedVersionId) {
+      const version = versions.find(v => v.id === selectedVersionId);
+      if (version) {
+        setDisplayItems(version.items);
+      }
+    } else {
+      setDisplayItems(items);
+    }
+    setPreviewIndex(0); // Reset preview when version changes
+  }, [selectedVersionId, versions, items]);
+
+  const completedItems = displayItems.filter(i => i.completed);
+  const selectedVersion = versions.find(v => v.id === selectedVersionId);
 
   // Demo item for when no items are completed yet
   const demoItem: PAOItem = {
@@ -294,7 +324,11 @@ html, body {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'mindpalace_pao_deck.txt');
+    
+    // Include version name in filename
+    const versionName = selectedVersion?.name.toLowerCase().replace(/\s+/g, '_') || 'default';
+    link.setAttribute('download', `pao_deck_${versionName}.txt`);
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -346,27 +380,47 @@ html, body {
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 w-full">
       
-      {/* Top Section: Title & Download */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-slate-700 shadow-xl">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">Anki Export</h2>
-          <p className="text-slate-400 text-xs sm:text-sm">
-            {completedItems.length > 0 
-              ? `Ready to export ${completedItems.length} cards.` 
-              : "Complete some PAO items to enable export."}
-          </p>
+      {/* Top Section: Title, Version Selector & Download */}
+      <div className="bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-slate-700 shadow-xl space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">Anki Export</h2>
+            <p className="text-slate-400 text-xs sm:text-sm">
+              {completedItems.length > 0 
+                ? `Ready to export ${completedItems.length} cards from ${selectedVersion?.name || 'selected version'}.` 
+                : "Complete some PAO items to enable export."}
+            </p>
+          </div>
+          <button 
+              onClick={() => {
+                  handleDownloadTXT();
+                  setShowTutorial(true);
+              }}
+              disabled={completedItems.length === 0}
+              className="h-10 sm:h-12 px-4 sm:px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-sm sm:text-base font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
+              title="Export Anki Deck"
+          >
+              <Download size={18} className="sm:w-5 sm:h-5" /> Export for Anki
+          </button>
         </div>
-        <button 
-            onClick={() => {
-                handleDownloadTXT();
-                setShowTutorial(true);
-            }}
-            disabled={completedItems.length === 0}
-            className="h-10 sm:h-12 px-4 sm:px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-sm sm:text-base font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
-            title="Export Anki Deck"
-        >
-            <Download size={18} className="sm:w-5 sm:h-5" /> Export for Anki
-        </button>
+
+        {/* Version Selector */}
+        {versions.length > 0 && (
+          <div className="flex items-center gap-3 pt-2 border-t border-slate-700">
+            <span className="text-sm text-slate-400 font-semibold">Export Version:</span>
+            <select
+              value={selectedVersionId || ''}
+              onChange={(e) => setSelectedVersionId(e.target.value)}
+              className="flex-1 md:flex-initial bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {versions.map(version => (
+                <option key={version.id} value={version.id}>
+                  {version.name} {version.isActive ? '(Active)' : ''} - {version.items.filter(i => i.completed).length} cards
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
 

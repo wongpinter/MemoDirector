@@ -10,6 +10,7 @@ import {
   hasPendingSync,
   getLastSyncTime
 } from '../services/syncQueue';
+import { migrateToVersioning, getActiveVersion } from '../services/versionManager';
 
 export type SyncStatus = 'idle' | 'syncing' | 'saved' | 'error' | 'pending';
 
@@ -31,7 +32,18 @@ export function usePAOData() {
       setLoading(true);
       try {
         const data = await loadPAOData();
-        setItems(data);
+        
+        // Migrate to versioning if needed
+        migrateToVersioning(data);
+        
+        // Load from active version
+        const activeVersion = getActiveVersion();
+        if (activeVersion) {
+          setItems(activeVersion.items);
+        } else {
+          setItems(data);
+        }
+        
         setLastSyncTime(getLastSyncTime());
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -130,6 +142,13 @@ export function usePAOData() {
     setItems(newItems);
   };
 
+  const reloadActiveVersion = useCallback(async () => {
+    const activeVersion = getActiveVersion();
+    if (activeVersion) {
+      setItems(activeVersion.items);
+    }
+  }, []);
+
   return {
     items,
     loading,
@@ -139,5 +158,6 @@ export function usePAOData() {
     manualSync,
     updateItem,
     updateItems,
+    reloadActiveVersion,
   };
 }

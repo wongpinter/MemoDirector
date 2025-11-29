@@ -6,6 +6,7 @@ import { AnkiExport } from './components/AnkiExport';
 import { ReverseLookup } from './components/ReverseLookup';
 import { PAOEditor } from './components/PAOEditor';
 import { MajorSystemTrainer } from './components/MajorSystemTrainer';
+import { VersionManager } from './components/VersionManager';
 import { PAOItem } from './types';
 import { usePAOData } from './hooks';
 import { ToastProvider } from './contexts';
@@ -19,10 +20,14 @@ enum Tab {
 }
 
 export default function App() {
-  const { items, loading, syncStatus, lastSyncTime, hasPendingSync, manualSync, updateItem, updateItems } = usePAOData();
+  const { items, loading, syncStatus, lastSyncTime, hasPendingSync, manualSync, updateItem, updateItems, reloadActiveVersion } = usePAOData();
   const [activeTab, setActiveTab] = useState<Tab>(Tab.GRID);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [prefillPerson, setPrefillPerson] = useState<string | undefined>(undefined);
+
+  const handleVersionSwitch = () => {
+    reloadActiveVersion();
+  };
 
   const handleReverseAssign = (number: number, name: string) => {
     setSelectedNumber(number);
@@ -79,6 +84,9 @@ export default function App() {
               MemoDirector
             </h1>
             <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono tracking-widest uppercase hidden xs:block">Cast &bull; Direct &bull; Remember</p>
+          </div>
+          <div className="ml-2 sm:ml-4">
+            <VersionManager onVersionSwitch={handleVersionSwitch} />
           </div>
         </div>
         

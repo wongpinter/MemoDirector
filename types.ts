@@ -13,6 +13,16 @@ export interface PAOItem {
   lastModified?: number; // Timestamp for conflict resolution
 }
 
+export interface PAOVersion {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: number;
+  lastModified: number;
+  isActive: boolean;
+  items: PAOItem[];
+}
+
 export interface Suggestion {
   person: string;
   action: string;

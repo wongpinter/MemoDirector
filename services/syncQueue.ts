@@ -1,10 +1,12 @@
 /**
  * Sync Queue Service
  * Manages LocalStorage-first saves with periodic Firebase sync
+ * Updated to support version management
  */
 
 import { PAOItem } from '../types';
-import { savePAOList as saveToFirebase, loadPAOList } from './db';
+import { savePAOList as saveToFirebase, loadPAOList, syncVersionsToFirebase, loadVersions as loadVersionsFromFirebase } from './db';
+import { loadVersions, saveVersions, getActiveVersion, updateVersion } from './versionManager';
 
 const SYNC_QUEUE_KEY = 'pao_sync_queue';
 const LAST_SYNC_KEY = 'pao_last_sync';
@@ -17,9 +19,17 @@ export interface SyncQueueItem {
 
 /**
  * Save items to LocalStorage immediately (fast, offline-safe)
+ * Now updates the active version
  */
 export function saveToLocalStorage(items: PAOItem[]): void {
   try {
+    // Update active version with new items
+    const activeVersion = getActiveVersion();
+    if (activeVersion) {
+      updateVersion(activeVersion.id, { items });
+    }
+    
+    // Keep legacy storage for backward compatibility
     localStorage.setItem('pao_data', JSON.stringify(items));
     
     // Add to sync queue
@@ -38,9 +48,17 @@ export function saveToLocalStorage(items: PAOItem[]): void {
 
 /**
  * Load items from LocalStorage
+ * Now loads from active version
  */
 export function loadFromLocalStorage(): PAOItem[] | null {
   try {
+    // Try to load from active version first
+    const activeVersion = getActiveVersion();
+    if (activeVersion) {
+      return activeVersion.items;
+    }
+    
+    // Fallback to legacy storage
     const data = localStorage.getItem('pao_data');
     if (data) {
       return JSON.parse(data);
@@ -105,13 +123,19 @@ function mergeItems(localItems: PAOItem[], remoteItems: PAOItem[]): PAOItem[] {
 
 /**
  * Sync queued items to Firebase with conflict resolution
+ * Now syncs all versions
  */
 export async function syncToFirebase(): Promise<{ success: boolean; error?: string; merged?: boolean }> {
   try {
     const queueData = localStorage.getItem(SYNC_QUEUE_KEY);
     
     if (!queueData) {
-      return { success: true }; // Nothing to sync
+      // Still sync versions even if no queue
+      const localVersions = loadVersions();
+      if (localVersions.length > 0) {
+        await syncVersionsToFirebase(localVersions);
+      }
+      return { success: true };
     }
     
     const queueItem: SyncQueueItem = JSON.parse(queueData);
@@ -133,13 +157,23 @@ export async function syncToFirebase(): Promise<{ success: boolean; error?: stri
     const wasMerged = remoteItems.length > 0 && 
       JSON.stringify(mergedItems) !== JSON.stringify(localItems);
     
-    // Save merged result to Firebase
+    // Save merged result to Firebase (legacy)
     await saveToFirebase(mergedItems);
+    
+    // Sync all versions
+    const localVersions = loadVersions();
+    await syncVersionsToFirebase(localVersions);
     
     // If data was merged, update LocalStorage with the merged result
     if (wasMerged) {
       console.log('🔄 Data merged from remote, updating LocalStorage');
       localStorage.setItem('pao_data', JSON.stringify(mergedItems));
+      
+      // Update active version
+      const activeVersion = getActiveVersion();
+      if (activeVersion) {
+        updateVersion(activeVersion.id, { items: mergedItems });
+      }
     }
     
     // Clear queue and update last sync time
@@ -182,30 +216,51 @@ export function startPeriodicSync(onSyncStatusChange?: (status: 'syncing' | 'syn
 
 /**
  * Load data with LocalStorage-first strategy and conflict resolution
+ * Now loads from active version
  */
 export async function loadPAOData(): Promise<PAOItem[]> {
-  // 1. Try LocalStorage first (instant)
+  // 1. Try LocalStorage first (instant) - from active version
   const localData = loadFromLocalStorage();
   
   if (localData) {
-    console.log('✅ Loaded from LocalStorage');
+    console.log('✅ Loaded from LocalStorage (active version)');
     
     // Sync from Firebase in background to check for updates
     try {
-      const firebaseData = await loadPAOList();
+      // Load versions from Firebase
+      const firebaseVersions = await loadVersionsFromFirebase();
+      if (firebaseVersions.length > 0) {
+        // Merge versions (simplified - just update if remote is newer)
+        const localVersions = loadVersions();
+        let hasUpdates = false;
+        
+        firebaseVersions.forEach(remoteVersion => {
+          const localVersion = localVersions.find(v => v.id === remoteVersion.id);
+          if (!localVersion || remoteVersion.lastModified > localVersion.lastModified) {
+            hasUpdates = true;
+          }
+        });
+        
+        if (hasUpdates) {
+          console.log('🔄 Newer versions found in Firebase');
+          saveVersions(firebaseVersions);
+          const activeVersion = getActiveVersion();
+          if (activeVersion) {
+            return activeVersion.items;
+          }
+        }
+      }
       
-      // If Firebase has data, merge with conflict resolution
+      // Also check legacy Firebase data
+      const firebaseData = await loadPAOList();
       if (firebaseData && firebaseData.length > 0) {
         const mergedData = mergeItems(localData, firebaseData);
         
-        // Check if merge resulted in changes
         if (JSON.stringify(mergedData) !== JSON.stringify(localData)) {
           console.log('🔄 Merged newer data from Firebase');
           saveToLocalStorage(mergedData);
           return mergedData;
         }
-        
-        console.log('ℹ️ Local data is up to date');
       }
     } catch (error) {
       console.log('ℹ️ Firebase not available, using LocalStorage');
@@ -216,9 +271,19 @@ export async function loadPAOData(): Promise<PAOItem[]> {
   
   // 2. If no local data, try Firebase
   try {
+    // Try loading versions first
+    const firebaseVersions = await loadVersionsFromFirebase();
+    if (firebaseVersions.length > 0) {
+      saveVersions(firebaseVersions);
+      const activeVersion = getActiveVersion();
+      if (activeVersion) {
+        return activeVersion.items;
+      }
+    }
+    
+    // Fallback to legacy data
     const firebaseData = await loadPAOList();
     if (firebaseData && firebaseData.length > 0) {
-      // Save to LocalStorage for next time
       saveToLocalStorage(firebaseData);
       return firebaseData;
     }
