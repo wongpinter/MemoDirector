@@ -22,8 +22,12 @@ export function DataPull({ onPullComplete }: DataPullProps) {
   // Check for local data and server data on mount
   useEffect(() => {
     const checkData = async () => {
-      const localData = localStorage.getItem('pao_data');
-      setHasLocalData(!!localData);
+      // Check for any local PAO data (legacy or versions)
+      const legacyData = localStorage.getItem('pao_data');
+      const versionsData = localStorage.getItem('pao_versions');
+      const hasAnyLocalData = !!(legacyData || versionsData);
+      
+      setHasLocalData(hasAnyLocalData);
 
       const serverInfo = await checkServerData();
       setServerData(serverInfo);
@@ -67,9 +71,16 @@ export function DataPull({ onPullComplete }: DataPullProps) {
   const handleClearLocal = () => {
     try {
       clearLocalData();
-      setHasLocalData(false);
+      
+      // Recheck local data to ensure it's actually cleared
+      const legacyData = localStorage.getItem('pao_data');
+      const versionsData = localStorage.getItem('pao_versions');
+      const hasAnyLocalData = !!(legacyData || versionsData);
+      
+      setHasLocalData(hasAnyLocalData);
       setPullResult(null);
       setShowClearConfirm(false);
+      
       showToast({
         type: 'success',
         message: '✅ Local data cleared'

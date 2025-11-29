@@ -189,6 +189,7 @@ export function clearLocalData(): void {
   try {
     localStorage.removeItem('pao_data');
     localStorage.removeItem('pao_versions');
+    localStorage.removeItem('pao_active_version');
     localStorage.removeItem('pao_sync_queue');
     localStorage.removeItem('pao_last_sync');
     console.log('✅ Local data cleared');
