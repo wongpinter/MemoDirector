@@ -1,7 +1,7 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc, Firestore } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, Firestore, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL, FirebaseStorage } from 'firebase/storage';
-import { PAOItem } from '../types';
+import { PAOItem, PAOVersion } from '../types';
 import { TOTAL_NUMBERS, STORAGE_KEYS } from '../constants';
 
 // ------------------------------------------------------------------
@@ -134,3 +134,86 @@ export const uploadMedia = async (
         throw e;
     }
 }
+
+// ============================================
+// VERSION MANAGEMENT
+// ============================================
+
+/**
+ * Load all versions from Firebase
+ */
+export const loadVersions = async (): Promise<PAOVersion[]> => {
+  if (!isFirebaseAvailable || !db) {
+    return [];
+  }
+
+  try {
+    const versionsRef = collection(db, "users", "default_user", "pao_versions");
+    const snapshot = await getDocs(versionsRef);
+    
+    const versions: PAOVersion[] = [];
+    snapshot.forEach(doc => {
+      versions.push(doc.data() as PAOVersion);
+    });
+    
+    return versions;
+  } catch (e) {
+    console.error("Error loading versions from Firebase", e);
+    return [];
+  }
+};
+
+/**
+ * Save a version to Firebase
+ */
+export const saveVersion = async (version: PAOVersion): Promise<void> => {
+  if (!isFirebaseAvailable || !db) {
+    console.log("ℹ️ Firebase not available, skipping version sync");
+    return;
+  }
+
+  try {
+    const versionRef = doc(db, "users", "default_user", "pao_versions", version.id);
+    await setDoc(versionRef, version);
+    console.log(`✅ Saved version ${version.name} to Firebase`);
+  } catch (e) {
+    console.error("❌ Error saving version to Firebase", e);
+    throw e;
+  }
+};
+
+/**
+ * Delete a version from Firebase
+ */
+export const deleteVersionFromFirebase = async (versionId: string): Promise<void> => {
+  if (!isFirebaseAvailable || !db) {
+    return;
+  }
+
+  try {
+    const versionRef = doc(db, "users", "default_user", "pao_versions", versionId);
+    await deleteDoc(versionRef);
+    console.log(`✅ Deleted version from Firebase`);
+  } catch (e) {
+    console.error("❌ Error deleting version from Firebase", e);
+    throw e;
+  }
+};
+
+/**
+ * Sync all versions to Firebase
+ */
+export const syncVersionsToFirebase = async (versions: PAOVersion[]): Promise<void> => {
+  if (!isFirebaseAvailable || !db) {
+    return;
+  }
+
+  try {
+    const promises = versions.map(version => saveVersion(version));
+    await Promise.all(promises);
+    console.log(`✅ Synced ${versions.length} versions to Firebase`);
+  } catch (e) {
+    console.error("❌ Error syncing versions to Firebase", e);
+    throw e;
+  }
+};
