@@ -245,12 +245,34 @@ When you have multiple versions, the Stats page displays a comparison table show
 - Identify which versions need more work
 - Track completion trends over time
 
+## Integration with Anki Export
+
+The Anki Export page now supports version selection:
+
+### Version Selector
+- Dropdown menu to choose which version to export
+- Shows card count for each version
+- Active version marked with "(Active)" label
+- Filename includes version name (e.g., `pao_deck_movie_heroes.txt`)
+
+### Export Features
+- Export any version, not just the active one
+- Preview cards from selected version
+- Card count updates based on selected version
+- Each version can be exported separately
+
+### Use Cases
+- Export different themed decks for different study sessions
+- Create separate Anki decks for beginner vs. advanced versions
+- Share specific versions with others
+- Test different PAO systems in Anki
+
 ## Related Features
 
-- **Backup/Restore**: Export all versions or specific versions
+- **Backup/Restore**: Export all versions or specific versions to CSV
 - **Sync System**: Automatic cloud backup of all versions
 - **Stats**: View completion stats per version with comparison table
-- **Anki Export**: Export specific version to Anki
+- **Anki Export**: Export any version to Anki with version-specific filenames
 
 ## Support
 
