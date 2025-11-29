@@ -117,7 +117,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border-2 border-slate-700 rounded-xl shadow-2xl z-50 max-h-96 overflow-y-auto min-w-[280px]">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border-2 border-slate-700 rounded-xl shadow-2xl max-h-96 overflow-y-auto min-w-[280px]" style={{ zIndex: 9998 }}>
           <div className="p-2">
             {versions.map(version => (
               <div 
@@ -220,7 +220,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
       )}
 
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowCreateModal(false)}>
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" style={{ zIndex: 9999 }} onClick={() => setShowCreateModal(false)}>
           <div className="bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-slate-100 mb-4">Create New Version</h3>
             <input
