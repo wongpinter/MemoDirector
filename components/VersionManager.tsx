@@ -107,13 +107,10 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
   return (
     <div className="relative">
       <button 
-        className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-800 border-2 border-slate-700 rounded-lg cursor-pointer text-sm font-medium text-slate-200 transition-all hover:border-indigo-500 hover:bg-slate-750"
+        className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-slate-800 border-2 border-slate-700 rounded-lg cursor-pointer text-sm font-medium text-slate-200 transition-all hover:border-indigo-500 hover:bg-slate-750"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="text-lg">📚</span>
-        <span className="hidden sm:inline whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
-          {activeVersion?.name || 'No Version'}
-        </span>
+        <span className="text-base md:text-lg">📚</span>
         <span className="text-xs text-slate-500">{isOpen ? '▲' : '▼'}</span>
       </button>
 
