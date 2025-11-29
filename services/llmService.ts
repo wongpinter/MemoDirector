@@ -19,19 +19,19 @@ export const getLLMProvider = (): ILLMProvider => {
   switch (config.provider) {
     case 'gemini':
       if (!config.apiKey) {
-        throw new Error("Gemini API key is required. Please set VITE_GEMINI_API_KEY in your .env file.");
+        throw new Error("Gemini API key is required. Please add your API key in Settings → API Keys.");
       }
       return new GeminiProvider(config.apiKey, config.model);
 
     case 'openai':
       if (!config.apiKey) {
-        throw new Error("OpenAI API key is required. Please set VITE_OPENAI_API_KEY in your .env file.");
+        throw new Error("OpenAI API key is required. Please add your API key in Settings → API Keys.");
       }
       return new OpenAIProvider(config.apiKey, config.model);
 
     case 'openrouter':
       if (!config.apiKey) {
-        throw new Error("OpenRouter API key is required. Please set VITE_OPENROUTER_API_KEY in your .env file.");
+        throw new Error("OpenRouter API key is required. Please add your API key in Settings → API Keys.");
       }
       return new OpenRouterProvider(config.apiKey, config.model);
 
