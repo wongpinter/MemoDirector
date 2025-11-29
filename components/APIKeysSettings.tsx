@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Key, Eye, EyeOff, Save, Trash2, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Key, Eye, EyeOff, Save, Trash2, AlertCircle, CheckCircle, Info, Star } from 'lucide-react';
 import {
   saveAPIKey,
   loadAPIKeys,
@@ -7,6 +7,8 @@ import {
   maskAPIKey,
   validateAPIKey,
   getDefaultModel,
+  getPreferredProvider,
+  setPreferredProvider,
   APIKeys
 } from '../services/apiKeys';
 
@@ -16,15 +18,23 @@ export function APIKeysSettings() {
   const [editMode, setEditMode] = useState<Record<string, boolean>>({});
   const [tempKeys, setTempKeys] = useState<Record<string, string>>({});
   const [tempModels, setTempModels] = useState<Record<string, string>>({});
+  const [preferredProvider, setPreferredProviderState] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     loadKeys();
+    setPreferredProviderState(getPreferredProvider());
   }, []);
 
   const loadKeys = () => {
     const loadedKeys = loadAPIKeys();
     setKeys(loadedKeys);
+  };
+
+  const handleSetPreferred = (provider: 'gemini' | 'openai' | 'openrouter' | 'ollama') => {
+    setPreferredProvider(provider);
+    setPreferredProviderState(provider);
+    showMessage('success', `${provider.toUpperCase()} set as preferred provider`);
   };
 
   const handleSave = (provider: 'gemini' | 'openai' | 'openrouter') => {
@@ -146,6 +156,74 @@ export function APIKeysSettings() {
           </ul>
         </div>
       </div>
+
+      {/* Preferred Provider Selector */}
+      {(keys.gemini || keys.openai || keys.openrouter || keys.ollama) && (
+        <div className="bg-indigo-950/20 border border-indigo-600/30 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Star size={18} className="text-indigo-400" />
+            <h3 className="text-sm font-bold text-indigo-300">Preferred Provider</h3>
+          </div>
+          <p className="text-xs text-indigo-200/80 mb-3">
+            If you have multiple API keys, choose which provider to use by default:
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {keys.gemini && (
+              <button
+                onClick={() => handleSetPreferred('gemini')}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  preferredProvider === 'gemini'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                Gemini
+              </button>
+            )}
+            {keys.openai && (
+              <button
+                onClick={() => handleSetPreferred('openai')}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  preferredProvider === 'openai'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                OpenAI
+              </button>
+            )}
+            {keys.openrouter && (
+              <button
+                onClick={() => handleSetPreferred('openrouter')}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  preferredProvider === 'openrouter'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                OpenRouter
+              </button>
+            )}
+            {keys.ollama && (
+              <button
+                onClick={() => handleSetPreferred('ollama')}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  preferredProvider === 'ollama'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                Ollama
+              </button>
+            )}
+          </div>
+          {!preferredProvider && (
+            <p className="text-xs text-slate-500 mt-2">
+              Default: Gemini → OpenAI → OpenRouter → Ollama
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Gemini */}
       <ProviderCard

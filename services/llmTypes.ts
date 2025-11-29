@@ -3,7 +3,7 @@
  */
 
 import { Suggestion } from "../types";
-import { loadAPIKeys, getModelPreference, getDefaultModel } from './apiKeys';
+import { loadAPIKeys, getModelPreference, getDefaultModel, getPreferredProvider } from './apiKeys';
 
 export type LLMProvider = 'gemini' | 'openai' | 'openrouter' | 'ollama';
 
@@ -59,8 +59,42 @@ export interface ILLMProvider {
 export const getLLMConfig = (): LLMConfig => {
   // First, try to get keys from local storage (user-provided keys)
   const localKeys = loadAPIKeys();
+  const preferredProvider = getPreferredProvider();
   
-  // Priority: Gemini > OpenAI > OpenRouter > Ollama
+  // If user has set a preferred provider and it's available, use it
+  if (preferredProvider) {
+    if (preferredProvider === 'gemini' && localKeys.gemini) {
+      return {
+        provider: 'gemini',
+        apiKey: localKeys.gemini,
+        model: getModelPreference('gemini') || getDefaultModel('gemini')
+      };
+    }
+    if (preferredProvider === 'openai' && localKeys.openai) {
+      return {
+        provider: 'openai',
+        apiKey: localKeys.openai,
+        model: getModelPreference('openai') || getDefaultModel('openai')
+      };
+    }
+    if (preferredProvider === 'openrouter' && localKeys.openrouter) {
+      return {
+        provider: 'openrouter',
+        apiKey: localKeys.openrouter,
+        baseUrl: 'https://openrouter.ai/api/v1',
+        model: getModelPreference('openrouter') || getDefaultModel('openrouter')
+      };
+    }
+    if (preferredProvider === 'ollama' && localKeys.ollama) {
+      return {
+        provider: 'ollama',
+        baseUrl: localKeys.ollama.baseUrl,
+        model: localKeys.ollama.model
+      };
+    }
+  }
+  
+  // Fallback to priority order: Gemini > OpenAI > OpenRouter > Ollama
   if (localKeys.gemini) {
     return {
       provider: 'gemini',

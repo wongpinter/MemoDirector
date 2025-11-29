@@ -23,6 +23,7 @@ export interface APIKeyConfig {
 
 const STORAGE_KEY = 'user_api_keys';
 const MODEL_STORAGE_KEY = 'user_ai_models';
+const PREFERRED_PROVIDER_KEY = 'user_preferred_provider';
 
 /**
  * Save API key for a provider
@@ -207,12 +208,32 @@ export function maskAPIKey(key: string): string {
 }
 
 /**
+ * Set preferred provider
+ */
+export function setPreferredProvider(provider: 'gemini' | 'openai' | 'openrouter' | 'ollama'): void {
+  try {
+    localStorage.setItem(PREFERRED_PROVIDER_KEY, provider);
+    console.log(`✅ Preferred provider set to ${provider}`);
+  } catch (error) {
+    console.error('Failed to set preferred provider:', error);
+  }
+}
+
+/**
+ * Get preferred provider
+ */
+export function getPreferredProvider(): string | null {
+  return localStorage.getItem(PREFERRED_PROVIDER_KEY);
+}
+
+/**
  * Clear all API keys (for logout or reset)
  */
 export function clearAllAPIKeys(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(MODEL_STORAGE_KEY);
+    localStorage.removeItem(PREFERRED_PROVIDER_KEY);
     console.log('✅ All API keys cleared');
   } catch (error) {
     console.error('Failed to clear API keys:', error);
