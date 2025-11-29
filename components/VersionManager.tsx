@@ -104,80 +104,100 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
   };
 
   return (
-    <div className="version-manager">
+    <div className="relative">
       <button 
-        className="version-selector-btn"
+        className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-800 border-2 border-slate-700 rounded-lg cursor-pointer text-sm font-medium text-slate-200 transition-all hover:border-indigo-500 hover:bg-slate-750"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="version-icon">📚</span>
-        <span className="version-name">{activeVersion?.name || 'No Version'}</span>
-        <span className="version-arrow">{isOpen ? '▲' : '▼'}</span>
+        <span className="text-lg">📚</span>
+        <span className="hidden sm:inline whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
+          {activeVersion?.name || 'No Version'}
+        </span>
+        <span className="text-xs text-slate-500">{isOpen ? '▲' : '▼'}</span>
       </button>
 
       {isOpen && (
-        <div className="version-dropdown">
-          <div className="version-list">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border-2 border-slate-700 rounded-xl shadow-2xl z-50 max-h-96 overflow-y-auto min-w-[280px]">
+          <div className="p-2">
             {versions.map(version => (
               <div 
                 key={version.id} 
-                className={`version-item ${version.isActive ? 'active' : ''}`}
+                className={`p-3 rounded-lg mb-2 border transition-all ${
+                  version.isActive 
+                    ? 'bg-indigo-900/30 border-indigo-600' 
+                    : 'bg-slate-900 border-slate-700 hover:bg-slate-750 hover:border-slate-600'
+                }`}
               >
                 {editingVersion === version.id ? (
-                  <div className="version-edit-form">
+                  <div className="space-y-2">
                     <input
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       placeholder="Version name"
-                      className="version-edit-input"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-indigo-500"
                     />
                     <input
                       type="text"
                       value={editDesc}
                       onChange={(e) => setEditDesc(e.target.value)}
                       placeholder="Description (optional)"
-                      className="version-edit-input"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-indigo-500"
                     />
-                    <div className="version-edit-actions">
-                      <button onClick={handleSaveEdit} className="btn-save">Save</button>
-                      <button onClick={() => setEditingVersion(null)} className="btn-cancel">Cancel</button>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={handleSaveEdit} 
+                        className="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button 
+                        onClick={() => setEditingVersion(null)} 
+                        className="flex-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-semibold rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </div>
                 ) : (
                   <>
                     <div 
-                      className="version-info"
+                      className={version.isActive ? 'cursor-default' : 'cursor-pointer'}
                       onClick={() => !version.isActive && handleSwitchVersion(version.id)}
                     >
-                      <div className="version-header">
-                        <span className="version-title">{version.name}</span>
-                        {version.isActive && <span className="active-badge">Active</span>}
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm text-slate-100">{version.name}</span>
+                        {version.isActive && (
+                          <span className="px-2 py-0.5 bg-indigo-600 text-white text-xs font-bold rounded-full">
+                            Active
+                          </span>
+                        )}
                       </div>
                       {version.description && (
-                        <div className="version-description">{version.description}</div>
+                        <div className="text-xs text-slate-400 mb-1">{version.description}</div>
                       )}
-                      <div className="version-meta">
-                        <span>Modified: {formatDate(version.lastModified)}</span>
+                      <div className="text-xs text-slate-500">
+                        Modified: {formatDate(version.lastModified)}
                       </div>
                     </div>
-                    <div className="version-actions">
+                    <div className="flex gap-1 mt-2">
                       <button 
                         onClick={() => handleStartEdit(version)}
-                        className="btn-icon"
+                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs transition-colors"
                         title="Edit"
                       >
                         ✏️
                       </button>
                       <button 
                         onClick={() => handleDuplicateVersion(version.id)}
-                        className="btn-icon"
+                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs transition-colors"
                         title="Duplicate"
                       >
                         📋
                       </button>
                       <button 
                         onClick={() => handleDeleteVersion(version.id)}
-                        className="btn-icon"
+                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         title="Delete"
                         disabled={versions.length === 1}
                       >
@@ -191,7 +211,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
           </div>
 
           <button 
-            className="btn-create-version"
+            className="w-full p-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-b-xl transition-colors"
             onClick={() => setShowCreateModal(true)}
           >
             + Create New Version
@@ -200,15 +220,15 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
       )}
 
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Create New Version</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowCreateModal(false)}>
+          <div className="bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold text-slate-100 mb-4">Create New Version</h3>
             <input
               type="text"
               value={newVersionName}
               onChange={(e) => setNewVersionName(e.target.value)}
               placeholder="Version name (e.g., Movie Characters)"
-              className="modal-input"
+              className="w-full px-4 py-3 mb-3 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               autoFocus
             />
             <input
@@ -216,296 +236,34 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
               value={newVersionDesc}
               onChange={(e) => setNewVersionDesc(e.target.value)}
               placeholder="Description (optional)"
-              className="modal-input"
+              className="w-full px-4 py-3 mb-3 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             />
-            <label className="modal-checkbox">
+            <label className="flex items-center gap-2 mb-4 text-sm text-slate-300 cursor-pointer">
               <input
                 type="checkbox"
                 checked={copyFromActive}
                 onChange={(e) => setCopyFromActive(e.target.checked)}
+                className="w-4 h-4 cursor-pointer"
               />
               Copy from active version
             </label>
-            <div className="modal-actions">
-              <button onClick={handleCreateVersion} className="btn-primary">Create</button>
-              <button onClick={() => setShowCreateModal(false)} className="btn-secondary">Cancel</button>
+            <div className="flex gap-2">
+              <button 
+                onClick={handleCreateVersion} 
+                className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-colors"
+              >
+                Create
+              </button>
+              <button 
+                onClick={() => setShowCreateModal(false)} 
+                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        .version-manager {
-          position: relative;
-        }
-
-        .version-selector-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 16px;
-          background: white;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.2s;
-        }
-
-        .version-selector-btn:hover {
-          border-color: #4CAF50;
-          background: #f5f5f5;
-        }
-
-        .version-icon {
-          font-size: 18px;
-        }
-
-        .version-name {
-          flex: 1;
-        }
-
-        .version-arrow {
-          font-size: 10px;
-          color: #666;
-        }
-
-        .version-dropdown {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 0;
-          margin-top: 8px;
-          background: white;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          z-index: 1000;
-          max-height: 400px;
-          overflow-y: auto;
-        }
-
-        .version-list {
-          padding: 8px;
-        }
-
-        .version-item {
-          padding: 12px;
-          border-radius: 6px;
-          margin-bottom: 8px;
-          border: 1px solid #e0e0e0;
-          transition: all 0.2s;
-        }
-
-        .version-item:hover {
-          background: #f9f9f9;
-        }
-
-        .version-item.active {
-          background: #e8f5e9;
-          border-color: #4CAF50;
-        }
-
-        .version-info {
-          cursor: pointer;
-        }
-
-        .version-item.active .version-info {
-          cursor: default;
-        }
-
-        .version-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 4px;
-        }
-
-        .version-title {
-          font-weight: 600;
-          font-size: 14px;
-        }
-
-        .active-badge {
-          background: #4CAF50;
-          color: white;
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .version-description {
-          font-size: 12px;
-          color: #666;
-          margin-bottom: 4px;
-        }
-
-        .version-meta {
-          font-size: 11px;
-          color: #999;
-        }
-
-        .version-actions {
-          display: flex;
-          gap: 4px;
-          margin-top: 8px;
-        }
-
-        .btn-icon {
-          padding: 4px 8px;
-          background: transparent;
-          border: 1px solid #e0e0e0;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          transition: all 0.2s;
-        }
-
-        .btn-icon:hover:not(:disabled) {
-          background: #f5f5f5;
-          border-color: #4CAF50;
-        }
-
-        .btn-icon:disabled {
-          opacity: 0.3;
-          cursor: not-allowed;
-        }
-
-        .version-edit-form {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .version-edit-input {
-          padding: 8px;
-          border: 1px solid #e0e0e0;
-          border-radius: 4px;
-          font-size: 14px;
-        }
-
-        .version-edit-actions {
-          display: flex;
-          gap: 8px;
-        }
-
-        .btn-save, .btn-cancel {
-          padding: 6px 12px;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 500;
-        }
-
-        .btn-save {
-          background: #4CAF50;
-          color: white;
-        }
-
-        .btn-cancel {
-          background: #e0e0e0;
-          color: #333;
-        }
-
-        .btn-create-version {
-          width: 100%;
-          padding: 12px;
-          background: #4CAF50;
-          color: white;
-          border: none;
-          border-radius: 0 0 6px 6px;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 14px;
-          transition: background 0.2s;
-        }
-
-        .btn-create-version:hover {
-          background: #45a049;
-        }
-
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 2000;
-        }
-
-        .modal-content {
-          background: white;
-          padding: 24px;
-          border-radius: 12px;
-          width: 90%;
-          max-width: 400px;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-        }
-
-        .modal-content h3 {
-          margin: 0 0 16px 0;
-          font-size: 18px;
-        }
-
-        .modal-input {
-          width: 100%;
-          padding: 10px;
-          margin-bottom: 12px;
-          border: 1px solid #e0e0e0;
-          border-radius: 6px;
-          font-size: 14px;
-          box-sizing: border-box;
-        }
-
-        .modal-checkbox {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 16px;
-          font-size: 14px;
-          cursor: pointer;
-        }
-
-        .modal-actions {
-          display: flex;
-          gap: 8px;
-        }
-
-        .btn-primary, .btn-secondary {
-          flex: 1;
-          padding: 10px;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 14px;
-        }
-
-        .btn-primary {
-          background: #4CAF50;
-          color: white;
-        }
-
-        .btn-primary:hover {
-          background: #45a049;
-        }
-
-        .btn-secondary {
-          background: #e0e0e0;
-          color: #333;
-        }
-
-        .btn-secondary:hover {
-          background: #d0d0d0;
-        }
-      `}</style>
     </div>
   );
 }
