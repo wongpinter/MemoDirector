@@ -24,7 +24,7 @@ export interface PullResult {
  * Returns the pulled items
  */
 export async function pullPAODataFromServer(): Promise<PullResult> {
-  try {
+ try {
     // Check if user is authenticated
     if (isAnonymousMode()) {
       return {
@@ -35,23 +35,52 @@ export async function pullPAODataFromServer(): Promise<PullResult> {
       };
     }
 
-    // Check if local data already exists
+    // Check if local data already exists for the current user
     const existingLocalData = localStorage.getItem('pao_data');
-    if (existingLocalData) {
-      try {
-        const parsed = JSON.parse(existingLocalData);
-        if (parsed && parsed.length > 0) {
-          return {
-            success: false,
-            itemsCount: 0,
-            versionsCount: 0,
-            error: 'Local data already exists. Use sync to merge data instead.',
-            message: 'To pull fresh data from server, clear local storage first.'
-          };
+    const existingVersions = localStorage.getItem('pao_versions');
+    
+    // If there's existing data and it's not empty, check if we should proceed
+    if ((existingLocalData && JSON.parse(existingLocalData)?.length > 0) ||
+        (existingVersions && existingVersions !== '[]' && existingVersions !== null)) {
+      return {
+        success: false,
+        itemsCount: 0,
+        versionsCount: 0,
+        error: 'Local data already exists. Use sync to merge data instead.',
+        message: 'To pull fresh data from server, clear local storage first.'
+      };
+    }
+
+    // Verify that the user actually has data on the server
+    let serverHasData = false;
+    try {
+      const serverVersions = await loadVersionsFromFirebase();
+      if (serverVersions.length > 0) {
+        serverHasData = true;
+      } else {
+        // Check if legacy data exists
+        const serverLegacyData = await loadPAOList();
+        if (serverLegacyData.length > 0) {
+          serverHasData = true;
         }
-      } catch (e) {
-        // Invalid JSON, proceed with pull
       }
+    } catch (error) {
+      console.error('Error checking server data:', error);
+      return {
+        success: false,
+        itemsCount: 0,
+        versionsCount: 0,
+        error: 'Failed to verify server data. Please check your connection.'
+      };
+    }
+
+    if (!serverHasData) {
+      return {
+        success: false,
+        itemsCount: 0,
+        versionsCount: 0,
+        error: 'No data found on server for this user.'
+      };
     }
 
     console.log('🔄 Starting pull from Firebase...');
@@ -81,10 +110,17 @@ export async function pullPAODataFromServer(): Promise<PullResult> {
         pulledItems = await loadPAOList();
         console.log(`✅ Pulled ${pulledItems.length} items from Firebase`);
 
-        // Create a default version from the pulled data
+        // Create a default version from the pulled data only if no versions exist
         if (pulledItems.length > 0) {
-          createDefaultVersion(pulledItems);
-          console.log('✅ Created default version from pulled data');
+          // Check if any versions already exist to avoid creating multiple defaults
+          const existingVersions = localStorage.getItem('pao_versions');
+          if (!existingVersions || existingVersions === '[]') {
+            createDefaultVersion(pulledItems);
+            console.log('✅ Created default version from pulled data');
+          } else {
+            // If versions exist, create a new version with a unique name
+            console.log('ℹ️ Versions already exist, not creating default version');
+          }
         }
       } catch (error) {
         console.error('❌ Failed to pull data from Firebase:', error);
