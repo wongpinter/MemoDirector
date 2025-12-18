@@ -4,11 +4,11 @@
 
 The Backup & Restore feature allows you to export your PAO (Person-Action-Object) data to CSV format and restore it later. This is useful for:
 
-- Creating offline backups of your memory palace data
-- Transferring data between devices
-- Sharing PAO systems with others
-- Recovering from data loss
-- Editing data in spreadsheet applications
+* Creating offline backups of your memory palace data
+* Transferring data between devices
+* Sharing PAO systems with others
+* Recovering from data loss
+* Editing data in spreadsheet applications
 
 ## Location
 
@@ -19,9 +19,9 @@ The Backup & Restore interface is located in the **Production Stats** tab (Setti
 ### Export Backup
 
 **What it does:**
-- Exports all 100 PAO items (00-99) to a CSV file
-- Includes all data: person, action, object, scene descriptions, media URLs, notes, completion status, and timestamps
-- Automatically generates a timestamped filename (e.g., `pao-backup-2025-11-29T14-30-00.csv`)
+* Exports all 100 PAO items (00-99) to a CSV file
+* Includes all data: person, action, object, scene descriptions, media URLs, notes, completion status, and timestamps
+* Automatically generates a timestamped filename (e.g.,  `pao-backup-2025-11-29T14-30-00.csv`)
 
 **How to use:**
 1. Click the "Export Backup" button
@@ -31,9 +31,9 @@ The Backup & Restore interface is located in the **Production Stats** tab (Setti
 ### Restore Backup
 
 **What it does:**
-- Imports PAO data from a CSV file
-- Provides three merge strategies to handle conflicts
-- Shows a preview before applying changes
+* Imports PAO data from a CSV file
+* Provides three merge strategies to handle conflicts
+* Shows a preview before applying changes
 
 **How to use:**
 1. Click the "Restore Backup" button
@@ -50,28 +50,31 @@ The Backup & Restore interface is located in the **Production Stats** tab (Setti
 When restoring a backup, you can choose how to handle items that exist in both your current data and the backup file:
 
 ### 1. Merge - Keep Imported (Recommended)
-- **Best for:** Restoring from a newer backup or updating your data
-- **Behavior:** 
-  - Adds new items from the backup
-  - Updates existing items with data from the backup
-  - Keeps all items from both sources
-- **Example:** If you have item #42 locally and in the backup, the backup version will be used
+
+* **Best for:** Restoring from a newer backup or updating your data
+* **Behavior:** 
+  + Adds new items from the backup
+  + Updates existing items with data from the backup
+  + Keeps all items from both sources
+* **Example:** If you have item #42 locally and in the backup, the backup version will be used
 
 ### 2. Merge - Keep Existing
-- **Best for:** Adding new items without overwriting your current work
-- **Behavior:**
-  - Adds new items from the backup
-  - Keeps your current version for items that exist in both
-  - Preserves all your local changes
-- **Example:** If you have item #42 locally and in the backup, your local version will be kept
+
+* **Best for:** Adding new items without overwriting your current work
+* **Behavior:**
+  + Adds new items from the backup
+  + Keeps your current version for items that exist in both
+  + Preserves all your local changes
+* **Example:** If you have item #42 locally and in the backup, your local version will be kept
 
 ### 3. Replace All (Destructive)
-- **Best for:** Complete restoration from backup
-- **Behavior:**
-  - Deletes all current data
-  - Replaces with backup data only
-  - **Warning:** This cannot be undone!
-- **Example:** Your entire PAO system will be replaced with the backup
+
+* **Best for:** Complete restoration from backup
+* **Behavior:**
+  + Deletes all current data
+  + Replaces with backup data only
+  + **Warning:** This cannot be undone!
+* **Example:** Your entire PAO system will be replaced with the backup
 
 ## CSV Format
 
@@ -84,16 +87,17 @@ Number,Person,Action,Object,Scene,ImageUrl,VideoUrl,Notes,Completed,LastModified
 ```
 
 ### Fields:
-- **Number** (0-99): The number in the Major System
-- **Person**: Character name
-- **Action**: What they're doing
-- **Object**: Associated object
-- **Scene**: Detailed scene description
-- **ImageUrl**: URL to generated/uploaded image
-- **VideoUrl**: URL to generated/uploaded video
-- **Notes**: Additional notes or phonetic explanations
-- **Completed**: true/false - whether the PAO is complete
-- **LastModified**: Unix timestamp of last modification
+
+* **Number** (0-99): The number in the Major System
+* **Person**: Character name
+* **Action**: What they're doing
+* **Object**: Associated object
+* **Scene**: Detailed scene description
+* **ImageUrl**: URL to generated/uploaded image
+* **VideoUrl**: URL to generated/uploaded video
+* **Notes**: Additional notes or phonetic explanations
+* **Completed**: true/false - whether the PAO is complete
+* **LastModified**: Unix timestamp of last modification
 
 ## Tips
 
@@ -109,41 +113,44 @@ Number,Person,Action,Object,Scene,ImageUrl,VideoUrl,Notes,Completed,LastModified
 ## Troubleshooting
 
 ### "Import failed: Invalid CSV format"
-- Ensure the file has the correct headers
-- Check that the Number column contains valid integers (0-99)
-- Verify the file is actually a CSV (not Excel .xlsx)
+
+* Ensure the file has the correct headers
+* Check that the Number column contains valid integers (0-99)
+* Verify the file is actually a CSV (not Excel .xlsx)
 
 ### "No valid items found in CSV"
-- The CSV might be empty or corrupted
-- Check that there's at least one data row after the header
-- Ensure numbers are in the valid range (0-99)
+
+* The CSV might be empty or corrupted
+* Check that there's at least one data row after the header
+* Ensure numbers are in the valid range (0-99)
 
 ### Lost data after restore
-- If you accidentally used "Replace All", you'll need to restore from a previous backup
-- Always keep multiple backup versions
-- Consider testing with "Merge - Keep Existing" first
+
+* If you accidentally used "Replace All", you'll need to restore from a previous backup
+* Always keep multiple backup versions
+* Consider testing with "Merge - Keep Existing" first
 
 ## Technical Details
 
-- **File Format**: UTF-8 encoded CSV
-- **Field Separator**: Comma (,)
-- **Text Qualifier**: Double quotes (") for fields containing commas or newlines
-- **Escape Character**: Double quotes are escaped as ""
-- **Line Ending**: Standard newline (\n)
+* **File Format**: UTF-8 encoded CSV
+* **Field Separator**: Comma (, )
+* **Text Qualifier**: Double quotes (") for fields containing commas or newlines
+* **Escape Character**: Double quotes are escaped as ""
+* **Line Ending**: Standard newline (\n)
 
 ## Integration with Sync
 
-The backup/restore feature works alongside the Firebase sync:
+The backup/restore feature works alongside the remote persistence sync:
 
-- **Export**: Creates a point-in-time snapshot of your local data
-- **Restore**: Updates local storage, which then syncs to Firebase automatically
-- **Conflicts**: Restore operations update the `lastModified` timestamp, helping with conflict resolution
+* **Export**: Creates a point-in-time snapshot of your local data
+* **Restore**: Updates local storage, which then syncs to remote persistence automatically
+* **Conflicts**: Restore operations update the `lastModified` timestamp, helping with conflict resolution
 
 ## Future Enhancements
 
 Potential improvements for future versions:
-- Automatic scheduled backups
-- Backup to cloud storage directly
-- Import/export specific number ranges
-- Backup history and comparison
-- Undo restore operation
+* Automatic scheduled backups
+* Backup to cloud storage directly
+* Import/export specific number ranges
+* Backup history and comparison
+* Undo restore operation

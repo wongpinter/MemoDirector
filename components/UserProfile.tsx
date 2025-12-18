@@ -65,22 +65,20 @@ export function UserProfile({ isOpen, onClose, onSignOut }: UserProfileProps) {
         <div className="flex border-b border-slate-700">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`flex-1 px-6 py-3 font-semibold transition-colors ${
-              activeTab === 'profile'
+            className={`flex-1 px-6 py-3 font-semibold transition-colors ${activeTab === 'profile'
                 ? 'text-indigo-400 border-b-2 border-indigo-400'
                 : 'text-slate-400 hover:text-slate-300'
-            }`}
+              }`}
           >
             <User size={18} className="inline mr-2" />
             Profile
           </button>
           <button
             onClick={() => setActiveTab('apikeys')}
-            className={`flex-1 px-6 py-3 font-semibold transition-colors ${
-              activeTab === 'apikeys'
+            className={`flex-1 px-6 py-3 font-semibold transition-colors ${activeTab === 'apikeys'
                 ? 'text-indigo-400 border-b-2 border-indigo-400'
                 : 'text-slate-400 hover:text-slate-300'
-            }`}
+              }`}
           >
             <Key size={18} className="inline mr-2" />
             API Keys
@@ -148,7 +146,7 @@ export function UserProfile({ isOpen, onClose, onSignOut }: UserProfileProps) {
                       <div className="text-sm text-blue-300">
                         <p className="font-semibold mb-1">Your Data is Private</p>
                         <ul className="space-y-1 text-blue-200/80">
-                          <li>• Your PAO data is stored in your own Firebase space</li>
+                          <li>• Your PAO data is stored in your own remote persistence space</li>
                           <li>• No other users can access your data</li>
                           <li>• Syncs automatically across your devices</li>
                           <li>• API keys are stored locally, never on our servers</li>

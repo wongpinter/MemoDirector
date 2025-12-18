@@ -354,7 +354,7 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
                 <h3 className="text-base sm:text-lg font-semibold text-white">Cloud Sync</h3>
                 <p className="text-xs sm:text-sm text-slate-400">
                   {syncEnabled
-                    ? 'Your data syncs automatically to Firebase'
+                    ? 'Your data syncs automatically to remote persistence'
                     : 'Data is stored locally only'
                   }
                 </p>

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The pull mechanism allows users to restore their PAO data from the server to a new device. Unlike sync (which is bidirectional and continuous), pull is a one-time operation that fetches data from Firebase to local storage.
+The pull mechanism allows users to restore their PAO data from the server to a new device. Unlike sync (which is bidirectional and continuous), pull is a one-time operation that fetches data from remote persistence to local storage.
 
 ## Use Cases
 
@@ -15,38 +15,41 @@ The pull mechanism allows users to restore their PAO data from the server to a n
 ### Services
 
 #### `pullService.ts`
+
 Main service for pull operations with three key functions:
 
-- **`pullPAODataFromServer()`**: Pulls PAO data and versions from Firebase
-  - Checks if user is authenticated
-  - Prevents pulling if local data already exists
-  - Pulls versions first, falls back to legacy data
-  - Saves pulled data to local storage
-  - Returns `PullResult` with status and counts
+* **`pullPAODataFromServer()`**: Pulls PAO data and versions from Firebase
+  + Checks if user is authenticated
+  + Prevents pulling if local data already exists
+  + Pulls versions first, falls back to legacy data
+  + Saves pulled data to local storage
+  + Returns `PullResult` with status and counts
 
-- **`checkServerData()`**: Checks if user has data on the server
-  - Returns item count and version count
-  - Useful for UI to determine if pull is available
-  - Non-destructive operation
+* **`checkServerData()`**: Checks if user has data on the server
+  + Returns item count and version count
+  + Useful for UI to determine if pull is available
+  + Non-destructive operation
 
-- **`clearLocalData()`**: Clears all local storage data
-  - Removes PAO data, versions, sync queue, and last sync time
-  - Allows user to pull fresh data from server
+* **`clearLocalData()`**: Clears all local storage data
+  + Removes PAO data, versions, sync queue, and last sync time
+  + Allows user to pull fresh data from server
 
 ### Components
 
 #### `DataPull.tsx`
+
 UI component for the pull mechanism with features:
 
-- Displays server data availability
-- Shows pull status and results
-- Provides clear local data option with confirmation
-- Integrates with toast notifications
-- Responsive design matching app theme
+* Displays server data availability
+* Shows pull status and results
+* Provides clear local data option with confirmation
+* Integrates with toast notifications
+* Responsive design matching app theme
 
 ### Hooks
 
 #### `usePullData.ts`
+
 Custom hook for managing pull operations:
 
 ```typescript
@@ -72,7 +75,7 @@ Check authentication
     ↓
 Check if local data exists (prevent overwrite)
     ↓
-Load versions from Firebase
+Load versions from remote persistence
     ↓
 If no versions, load legacy PAO list
     ↓
@@ -186,8 +189,8 @@ function MyComponent() {
 
 ### Edge Cases
 
-- Pull with no server data
-- Pull with corrupted local data
-- Pull with network disconnection
-- Pull with multiple versions
-- Pull with legacy data format
+* Pull with no server data
+* Pull with corrupted local data
+* Pull with network disconnection
+* Pull with multiple versions
+* Pull with legacy data format

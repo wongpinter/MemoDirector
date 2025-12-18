@@ -2,7 +2,7 @@
 
 MemoDirector is a "Movie Studio for your Mind." It is a specialized application designed to help memory athletes and learners build, manage, and visualize a **PAO (Person-Action-Object)** memory system using the Major System.
 
-It leverages **Google Gemini AI** to automatically suggest characters, actions, and objects based on phonetic rules, and uses **Firebase** for cloud synchronization (with a LocalStorage fallback).
+It leverages **Google Gemini AI** to automatically suggest characters, actions, and objects based on phonetic rules, and uses **remote persistence** for cloud synchronization (with a LocalStorage fallback).
 
 ## 🚀 Features
 
@@ -51,17 +51,13 @@ cp .env.example .env
 VITE_GEMINI_API_KEY=your_google_ai_studio_key_here
 ```
 
-#### B. Firebase Firestore (Optional - For Cloud Sync)
+#### B. Cloud Sync (Optional - For Cloud Backup)
 
 If you skip this, the app will default to **LocalStorage**, which works perfectly for a single device.
 
-1.  Go to the [Firebase Console](https://console.firebase.google.com/).
-2.  Create a new project.
-3.  Navigate to **Build > Firestore Database** and click **Create Database**.
-4.  Start in **Test Mode** (or configure rules to allow read/write).
-5.  Go to **Project Settings > General**.
-6.  Scroll down to "Your apps" and click the **</> (Web)** icon to register a web app.
-7.  Copy the configuration values into your `.env` file:
+1.  Set up your own cloud storage / remote persistence service.
+2.  Obtain the necessary configuration keys.
+3.  Copy the configuration values into your `.env` file:
 
 ```env
 VITE_FIREBASE_API_KEY=...
@@ -72,7 +68,7 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 ```
 
-> **Note:** All environment variables now use the `VITE_` prefix as per Vite conventions. The application code (`services/db.ts`) automatically detects if these keys are present. If not, it falls back to LocalStorage without errors.
+> **Note:** All environment variables now use the `VITE_` prefix as per Vite conventions. The application code ( `services/db.ts` ) automatically detects if these keys are present. If not, it falls back to LocalStorage without errors.
 
 ### 3. Running the App
 
@@ -88,8 +84,8 @@ npm run dev
 
 *   `src/components`: UI Components (Grid, Editor, Stats, etc.).
 *   `src/services`: External integrations.
-    *   `geminiService.ts`: Handles prompts and communication with Google GenAI SDK.
-    *   `db.ts`: Handles data persistence (Firebase / LocalStorage logic).
+    -   `geminiService.ts`: Handles prompts and communication with Google GenAI SDK.
+    -   `db.ts`: Handles data persistence (Remote Persistence / LocalStorage logic).
 *   `src/constants.ts`: Major System phonetic rules and calculation logic.
 *   `src/types.ts`: TypeScript interfaces.
 
@@ -104,20 +100,20 @@ The app uses specific prompts in `geminiService.ts` to enforce Major System rule
 
 **Live URL:** https://memodirector.web.app
 
-The app is automatically deployed to Firebase Hosting when changes are pushed to the `main` branch.
+The app is automatically deployed to cloud hosting when changes are pushed to the `main` branch.
 
 ## 📚 Documentation
 
 For detailed documentation, development guides, and project status reports, see the [docs](docs/) directory:
 
-- [Quick Start Guide](docs/QUICK_START.md)
-- [Backup & Restore Guide](docs/BACKUP_RESTORE.md) - **NEW!** Export and restore your PAO data
-- [Sync Strategy](docs/SYNC_STRATEGY.md) - Learn about LocalStorage-first sync
-- [Sync Migration Guide](docs/SYNC_MIGRATION.md) - What changed and how to use it
-- [Deployment Guide](docs/DEPLOYMENT.md)
-- [Refactoring Guide](docs/REFACTORING_GUIDE.md)
-- [Testing Report](docs/TESTING_REPORT.md)
-- [And more...](docs/README.md)
+* [Quick Start Guide](docs/QUICK_START.md)
+* [Backup & Restore Guide](docs/BACKUP_RESTORE.md) - **NEW!** Export and restore your PAO data
+* [Sync Strategy](docs/SYNC_STRATEGY.md) - Learn about LocalStorage-first sync
+* [Sync Migration Guide](docs/SYNC_MIGRATION.md) - What changed and how to use it
+* [Deployment Guide](docs/DEPLOYMENT.md)
+* [Refactoring Guide](docs/REFACTORING_GUIDE.md)
+* [Testing Report](docs/TESTING_REPORT.md)
+* [And more...](docs/README.md)
 
 ## 📜 License
 

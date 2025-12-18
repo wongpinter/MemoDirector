@@ -128,10 +128,10 @@ export default function App() {
                   onClick={manualSync}
                   disabled={syncStatus === 'syncing'}
                   className={`p-1.5 rounded-md transition-all ${hasPendingSync
-                      ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title={hasPendingSync ? 'Sync pending changes to Firebase' : 'Sync to Firebase'}
+                  title={hasPendingSync ? 'Sync pending changes to remote persistence' : 'Sync to remote persistence'}
                 >
                   <RefreshCw size={18} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
                 </button>
