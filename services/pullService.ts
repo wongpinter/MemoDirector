@@ -5,10 +5,12 @@
  */
 
 import { PAOItem, PAOVersion } from '../types';
-import { loadPAOList, loadVersions as loadVersionsFromFirebase } from './db';
+import { loadPAOListFromFirebase, loadVersions as loadVersionsFromFirebase } from './db';
 import { saveVersions, getActiveVersion, createDefaultVersion } from './versionManager';
 import { saveToLocalStorage } from './syncQueue';
-import { isAnonymousMode } from './auth';
+import { getCurrentUserId, isAnonymousMode } from './auth';
+
+const namespacedKey = (base: string) => `${base}_${getCurrentUserId()}`;
 
 export interface PullResult {
   success: boolean;
@@ -24,7 +26,7 @@ export interface PullResult {
  * Returns the pulled items
  */
 export async function pullPAODataFromServer(): Promise<PullResult> {
- try {
+  try {
     // Check if user is authenticated
     if (isAnonymousMode()) {
       return {
@@ -36,12 +38,14 @@ export async function pullPAODataFromServer(): Promise<PullResult> {
     }
 
     // Check if local data already exists for the current user
-    const existingLocalData = localStorage.getItem('pao_data');
-    const existingVersions = localStorage.getItem('pao_versions');
-    
+    const dataKey = namespacedKey('pao_data');
+    const versionsKey = namespacedKey('pao_versions');
+    const existingLocalData = localStorage.getItem(dataKey);
+    const existingVersions = localStorage.getItem(versionsKey);
+
     // If there's existing data and it's not empty, check if we should proceed
     if ((existingLocalData && JSON.parse(existingLocalData)?.length > 0) ||
-        (existingVersions && existingVersions !== '[]' && existingVersions !== null)) {
+      (existingVersions && existingVersions !== '[]' && existingVersions !== null)) {
       return {
         success: false,
         itemsCount: 0,
@@ -54,12 +58,12 @@ export async function pullPAODataFromServer(): Promise<PullResult> {
     // Verify that the user actually has data on the server
     let serverHasData = false;
     try {
-      const serverVersions = await loadVersionsFromFirebase();
+      const { versions: serverVersions } = await loadVersionsFromFirebase();
       if (serverVersions.length > 0) {
         serverHasData = true;
       } else {
         // Check if legacy data exists
-        const serverLegacyData = await loadPAOList();
+        const serverLegacyData = await loadPAOListFromFirebase();
         if (serverLegacyData.length > 0) {
           serverHasData = true;
         }
@@ -90,7 +94,8 @@ export async function pullPAODataFromServer(): Promise<PullResult> {
     let pulledItems: PAOItem[] = [];
 
     try {
-      versions = await loadVersionsFromFirebase();
+      const { versions: loadedVersions } = await loadVersionsFromFirebase();
+      versions = loadedVersions;
       console.log(`✅ Pulled ${versions.length} versions from Firebase`);
     } catch (error) {
       console.log('ℹ️ No versions found in Firebase, attempting to pull legacy data');
@@ -107,14 +112,14 @@ export async function pullPAODataFromServer(): Promise<PullResult> {
     } else {
       // 3. Fallback: pull legacy PAO list from Firebase
       try {
-        pulledItems = await loadPAOList();
+        pulledItems = await loadPAOListFromFirebase();
         console.log(`✅ Pulled ${pulledItems.length} items from Firebase`);
 
         // Create a default version from the pulled data only if no versions exist
         if (pulledItems.length > 0) {
           // Check if any versions already exist to avoid creating multiple defaults
-          const existingVersions = localStorage.getItem('pao_versions');
-          if (!existingVersions || existingVersions === '[]') {
+          const localVersionsJson = localStorage.getItem(versionsKey);
+          if (!localVersionsJson || localVersionsJson === '[]') {
             createDefaultVersion(pulledItems);
             console.log('✅ Created default version from pulled data');
           } else {
@@ -181,7 +186,7 @@ export async function checkServerData(): Promise<{
 
     // Check versions
     try {
-      const versions = await loadVersionsFromFirebase();
+      const { versions } = await loadVersionsFromFirebase();
       versionsCount = versions.length;
       if (versions.length > 0) {
         const activeVersion = versions.find(v => v.isActive);
@@ -196,7 +201,7 @@ export async function checkServerData(): Promise<{
     // If no versions, check legacy data
     if (itemsCount === 0) {
       try {
-        const items = await loadPAOList();
+        const items = await loadPAOListFromFirebase();
         itemsCount = items.length;
       } catch (e) {
         // No data
@@ -223,11 +228,23 @@ export async function checkServerData(): Promise<{
  */
 export function clearLocalData(): void {
   try {
-    localStorage.removeItem('pao_data');
-    localStorage.removeItem('pao_versions');
-    localStorage.removeItem('pao_active_version');
-    localStorage.removeItem('pao_sync_queue');
-    localStorage.removeItem('pao_last_sync');
+    const uid = getCurrentUserId();
+    const keys = [
+      namespacedKey('pao_data'),
+      namespacedKey('pao_versions'),
+      namespacedKey('pao_active_version'),
+      namespacedKey('pao_sync_queue'),
+      namespacedKey('pao_last_sync'),
+    ];
+
+    keys.forEach((key) => localStorage.removeItem(key));
+
+    // Clean up legacy keys for anonymous sessions
+    if (uid === 'anonymous') {
+      ['pao_data', 'pao_versions', 'pao_active_version', 'pao_sync_queue', 'pao_last_sync'].forEach((key) => {
+        localStorage.removeItem(key);
+      });
+    }
     console.log('✅ Local data cleared');
   } catch (error) {
     console.error('❌ Failed to clear local data:', error);

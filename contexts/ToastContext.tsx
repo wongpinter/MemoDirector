@@ -22,10 +22,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const showToast = useCallback((message: string | { message: string; type?: ToastType }, type: ToastType = 'info') => {
     const id = `toast-${Date.now()}-${Math.random()}`;
-    
+
     let toastMessage: string;
     let toastType: ToastType;
-    
+
     if (typeof message === 'string') {
       toastMessage = message;
       toastType = type;
@@ -33,11 +33,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       toastMessage = message.message;
       toastType = message.type || 'info';
     }
-    
+
     const newToast: Toast = { id, message: toastMessage, type: toastType };
-    
+
     setToasts(prev => [...prev, newToast]);
-    
+
     // Auto-hide after duration
     setTimeout(() => {
       hideToast(id);
@@ -78,7 +78,12 @@ function ToastContainer({ toasts, onClose }: { toasts: Toast[]; onClose: (id: st
 }
 
 // Individual Toast Item
-function ToastItem({ toast, onClose }: { toast: Toast; onClose: (id: string) => void }) {
+interface ToastItemProps {
+  toast: Toast;
+  onClose: (id: string) => void;
+}
+
+const ToastItem: React.FC<ToastItemProps> = ({ toast, onClose }) => {
   const bgColor = {
     success: 'bg-emerald-600',
     error: 'bg-red-600',

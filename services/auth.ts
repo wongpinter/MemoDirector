@@ -4,8 +4,8 @@
  * Provides user-specific data isolation for multi-tenant support
  */
 
-import { 
-  getAuth, 
+import {
+  getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -18,13 +18,22 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { getApps } from 'firebase/app';
+import { STORAGE_KEYS } from '../constants';
 
 let auth: Auth | null = null;
+let authInitAttempted = false;
 
 /**
  * Initialize Firebase Auth
+ * Only attempts once per session to avoid log spam
  */
 export function initializeAuth(): Auth | null {
+  // Only attempt initialization once
+  if (authInitAttempted) {
+    return auth;
+  }
+  authInitAttempted = true;
+
   try {
     const apps = getApps();
     if (apps.length > 0) {
@@ -75,12 +84,12 @@ export async function signUp(email: string, password: string, displayName?: stri
 
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    
+
     // Update display name if provided
     if (displayName && userCredential.user) {
       await updateProfile(userCredential.user, { displayName });
     }
-    
+
     console.log('✅ User signed up:', userCredential.user.email);
     return userCredential.user;
   } catch (error: any) {
@@ -167,10 +176,10 @@ export function onAuthChange(callback: (user: User | null) => void): () => void 
   if (!auth) {
     initializeAuth();
   }
-  
+
   if (!auth) {
-    console.warn('Auth not available, callback will not be registered');
-    return () => {};
+    // Auth unavailable (Firebase not configured) - return no-op cleanup
+    return () => { };
   }
 
   return onAuthStateChanged(auth, callback);
@@ -216,8 +225,43 @@ export function getUserEmail(): string | null {
 }
 
 /**
- * Check if running in anonymous mode (no Firebase)
+ * Check if running in anonymous mode (no Firebase or no authenticated user)
  */
 export function isAnonymousMode(): boolean {
-  return !auth || getCurrentUserId() === 'anonymous';
+  return getCurrentUserId() === 'anonymous';
+}
+
+/**
+ * Get user-scoped storage key for sync preference
+ */
+function getSyncStorageKey(): string {
+  const userId = getCurrentUserId();
+  return `${STORAGE_KEYS.SYNC_ENABLED}_${userId}`;
+}
+
+/**
+ * Check if cloud sync is enabled for the current user
+ * Returns false for anonymous users or if not explicitly enabled
+ */
+export function isSyncEnabled(): boolean {
+  // Anonymous users never have sync enabled
+  if (isAnonymousMode()) {
+    return false;
+  }
+
+  const value = localStorage.getItem(getSyncStorageKey());
+  return value === 'true';
+}
+
+/**
+ * Enable or disable cloud sync for the current user
+ */
+export function setSyncEnabled(enabled: boolean): void {
+  if (isAnonymousMode()) {
+    console.warn('Cannot enable sync for anonymous users');
+    return;
+  }
+
+  localStorage.setItem(getSyncStorageKey(), enabled ? 'true' : 'false');
+  console.log(`✅ Cloud sync ${enabled ? 'enabled' : 'disabled'}`);
 }

@@ -17,9 +17,9 @@ import {
 import { fetchWithTimeout, DEFAULT_LLM_TIMEOUT, cleanLLMThinking, enforceWordLimit } from "./llmUtils";
 
 export class OpenAIProvider implements ILLMProvider {
-  private apiKey: string;
-  private model: string;
-  private baseUrl: string;
+  protected apiKey: string;
+  protected model: string;
+  protected baseUrl: string;
 
   constructor(apiKey: string, model?: string, baseUrl?: string) {
     this.apiKey = apiKey;
@@ -27,7 +27,7 @@ export class OpenAIProvider implements ILLMProvider {
     this.baseUrl = baseUrl || 'https://api.openai.com/v1';
   }
 
-  private async makeRequest(messages: Array<{role: string, content: string}>, jsonMode: boolean = false): Promise<string> {
+  protected async makeRequest(messages: Array<{ role: string, content: string }>, jsonMode: boolean = false): Promise<string> {
     const response = await fetchWithTimeout(
       `${this.baseUrl}/chat/completions`,
       {
@@ -112,18 +112,18 @@ export class OpenAIProvider implements ILLMProvider {
 
       const parsed = JSON.parse(responseText);
       const suggestions = parsed.suggestions || [];
-      
+
       if (suggestions.length === 0) {
         console.warn('⚠️ [OpenAI] No suggestions returned');
       }
-      
+
       // Clean up thinking text from person_description
       return suggestions.map((s: Suggestion) => ({
         ...s,
-        person_description: s.person_description 
+        person_description: s.person_description
           ? enforceWordLimit(cleanLLMThinking(s.person_description), 15)
           : s.person_description,
-        notes: s.notes 
+        notes: s.notes
           ? cleanLLMThinking(s.notes)
           : s.notes
       }));

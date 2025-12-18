@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { PAOItem } from '../types';
 import { useDebouncedValue } from './useDebouncedValue';
 import { UI_CONSTANTS } from '../constants';
-import { 
-  loadPAOData, 
-  saveToLocalStorage, 
-  syncToFirebase, 
+import {
+  loadPAOData,
+  saveToLocalStorage,
+  syncToFirebase,
   startPeriodicSync,
-  hasPendingSync,
+  hasPendingSync as checkPendingSync,
   getLastSyncTime
 } from '../services/syncQueue';
 import { migrateToVersioning, getActiveVersion } from '../services/versionManager';
@@ -20,9 +20,11 @@ export type SyncStatus = 'idle' | 'syncing' | 'saved' | 'error' | 'pending';
 export function usePAOData() {
   const [items, setItems] = useState<PAOItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false); // Guard for auto-save
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
-  
+  const [pendingSyncState, setPendingSyncState] = useState(false); // Reactive pending state
+
   // Debounce items for auto-save
   const debouncedItems = useDebouncedValue(items, UI_CONSTANTS.DEBOUNCE_DELAY);
 
@@ -32,10 +34,10 @@ export function usePAOData() {
       setLoading(true);
       try {
         const data = await loadPAOData();
-        
+
         // Migrate to versioning if needed
         migrateToVersioning(data);
-        
+
         // Load from active version
         const activeVersion = getActiveVersion();
         if (activeVersion) {
@@ -43,12 +45,14 @@ export function usePAOData() {
         } else {
           setItems(data);
         }
-        
+
         setLastSyncTime(getLastSyncTime());
+        setPendingSyncState(checkPendingSync());
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {
         setLoading(false);
+        setIsInitialized(true); // Mark as initialized after first load
       }
     }
     loadData();
@@ -56,13 +60,17 @@ export function usePAOData() {
 
   // Auto-save to LocalStorage when items change (debounced)
   useEffect(() => {
-    if (loading) return; // Don't save during initial load
+    // Don't save during initial load or before initialization
+    if (loading || !isInitialized) return;
 
     try {
       saveToLocalStorage(debouncedItems);
-      setSyncStatus('pending'); // Mark as pending sync to Firebase
+      setSyncStatus('pending');
+      setPendingSyncState(true);
       setTimeout(() => {
-        if (hasPendingSync()) {
+        const pending = checkPendingSync();
+        setPendingSyncState(pending);
+        if (pending) {
           setSyncStatus('pending');
         } else {
           setSyncStatus('idle');
@@ -73,7 +81,7 @@ export function usePAOData() {
       setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
     }
-  }, [debouncedItems, loading]);
+  }, [debouncedItems, loading, isInitialized]);
 
   // Start periodic sync on mount
   useEffect(() => {
@@ -87,9 +95,10 @@ export function usePAOData() {
           setItems(mergedData);
           console.log('🔄 Reloaded merged data from periodic sync');
         }
-        
+
         setSyncStatus('saved');
         setLastSyncTime(Date.now());
+        setPendingSyncState(checkPendingSync());
         setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
       } else if (status === 'error') {
         setSyncStatus('error');
@@ -104,7 +113,7 @@ export function usePAOData() {
   const manualSync = useCallback(async () => {
     setSyncStatus('syncing');
     const result = await syncToFirebase();
-    
+
     if (result.success) {
       // If data was merged, reload from LocalStorage to get the merged result
       if (result.merged) {
@@ -112,15 +121,16 @@ export function usePAOData() {
         setItems(mergedData);
         console.log('🔄 Reloaded merged data');
       }
-      
+
       setSyncStatus('saved');
       setLastSyncTime(Date.now());
+      setPendingSyncState(checkPendingSync());
       setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
     } else {
       setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
     }
-    
+
     return result;
   }, []);
 
@@ -130,9 +140,9 @@ export function usePAOData() {
       ...updatedItem,
       lastModified: Date.now()
     };
-    
-    setItems(prev => 
-      prev.map(item => 
+
+    setItems(prev =>
+      prev.map(item =>
         item.number === itemWithTimestamp.number ? itemWithTimestamp : item
       )
     );
@@ -154,10 +164,11 @@ export function usePAOData() {
     loading,
     syncStatus,
     lastSyncTime,
-    hasPendingSync: hasPendingSync(),
+    hasPendingSync: pendingSyncState,
     manualSync,
     updateItem,
     updateItems,
     reloadActiveVersion,
   };
 }
+

@@ -4,15 +4,17 @@
  */
 
 import { PAOVersion, PAOItem } from '../types';
+import { getCurrentUserId } from './auth';
 
 const VERSIONS_KEY = 'pao_versions';
 const ACTIVE_VERSION_KEY = 'pao_active_version';
+const namespacedKey = (base: string) => `${base}_${getCurrentUserId()}`;
 
 /**
  * Generate a unique ID for a version
  */
 function generateVersionId(): string {
-  return `v_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `v_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
@@ -35,10 +37,20 @@ function generateEmptyItems(): PAOItem[] {
  */
 export function loadVersions(): PAOVersion[] {
   try {
-    const data = localStorage.getItem(VERSIONS_KEY);
+    const key = namespacedKey(VERSIONS_KEY);
+    const data = localStorage.getItem(key);
     if (data) {
       return JSON.parse(data);
     }
+
+    const legacy = localStorage.getItem(VERSIONS_KEY);
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      localStorage.setItem(key, legacy);
+      localStorage.removeItem(VERSIONS_KEY);
+      return parsed;
+    }
+
     return [];
   } catch (error) {
     console.error('Failed to load versions:', error);
@@ -51,7 +63,7 @@ export function loadVersions(): PAOVersion[] {
  */
 export function saveVersions(versions: PAOVersion[]): void {
   try {
-    localStorage.setItem(VERSIONS_KEY, JSON.stringify(versions));
+    localStorage.setItem(namespacedKey(VERSIONS_KEY), JSON.stringify(versions));
   } catch (error) {
     console.error('Failed to save versions:', error);
     throw error;
@@ -62,14 +74,26 @@ export function saveVersions(versions: PAOVersion[]): void {
  * Get the active version ID
  */
 export function getActiveVersionId(): string | null {
-  return localStorage.getItem(ACTIVE_VERSION_KEY);
+  const key = namespacedKey(ACTIVE_VERSION_KEY);
+  const value = localStorage.getItem(key);
+
+  if (value) return value;
+
+  const legacy = localStorage.getItem(ACTIVE_VERSION_KEY);
+  if (legacy) {
+    localStorage.setItem(key, legacy);
+    localStorage.removeItem(ACTIVE_VERSION_KEY);
+    return legacy;
+  }
+
+  return null;
 }
 
 /**
  * Set the active version ID
  */
 export function setActiveVersionId(versionId: string): void {
-  localStorage.setItem(ACTIVE_VERSION_KEY, versionId);
+  localStorage.setItem(namespacedKey(ACTIVE_VERSION_KEY), versionId);
 }
 
 /**
@@ -78,11 +102,11 @@ export function setActiveVersionId(versionId: string): void {
 export function getActiveVersion(): PAOVersion | null {
   const versions = loadVersions();
   const activeId = getActiveVersionId();
-  
+
   if (activeId) {
     return versions.find(v => v.id === activeId) || null;
   }
-  
+
   return versions.find(v => v.isActive) || null;
 }
 
@@ -91,7 +115,7 @@ export function getActiveVersion(): PAOVersion | null {
  */
 export function createVersion(name: string, description?: string, copyFromActive: boolean = false): PAOVersion {
   const versions = loadVersions();
-  
+
   let items: PAOItem[];
   if (copyFromActive) {
     const activeVersion = getActiveVersion();
@@ -99,7 +123,7 @@ export function createVersion(name: string, description?: string, copyFromActive
   } else {
     items = generateEmptyItems();
   }
-  
+
   const newVersion: PAOVersion = {
     id: generateVersionId(),
     name,
@@ -109,14 +133,14 @@ export function createVersion(name: string, description?: string, copyFromActive
     isActive: versions.length === 0, // First version is active by default
     items
   };
-  
+
   versions.push(newVersion);
   saveVersions(versions);
-  
+
   if (newVersion.isActive) {
     setActiveVersionId(newVersion.id);
   }
-  
+
   return newVersion;
 }
 
@@ -126,17 +150,17 @@ export function createVersion(name: string, description?: string, copyFromActive
 export function updateVersion(versionId: string, updates: Partial<Omit<PAOVersion, 'id' | 'createdAt'>>): PAOVersion | null {
   const versions = loadVersions();
   const index = versions.findIndex(v => v.id === versionId);
-  
+
   if (index === -1) {
     return null;
   }
-  
+
   versions[index] = {
     ...versions[index],
     ...updates,
     lastModified: Date.now()
   };
-  
+
   saveVersions(versions);
   return versions[index];
 }
@@ -147,22 +171,22 @@ export function updateVersion(versionId: string, updates: Partial<Omit<PAOVersio
 export function deleteVersion(versionId: string): boolean {
   const versions = loadVersions();
   const index = versions.findIndex(v => v.id === versionId);
-  
+
   if (index === -1) {
     return false;
   }
-  
+
   const wasActive = versions[index].isActive;
   versions.splice(index, 1);
-  
+
   // If deleted version was active, activate another one
   if (wasActive && versions.length > 0) {
     versions[0].isActive = true;
     setActiveVersionId(versions[0].id);
   } else if (versions.length === 0) {
-    localStorage.removeItem(ACTIVE_VERSION_KEY);
+    localStorage.removeItem(namespacedKey(ACTIVE_VERSION_KEY));
   }
-  
+
   saveVersions(versions);
   return true;
 }
@@ -173,18 +197,18 @@ export function deleteVersion(versionId: string): boolean {
 export function switchActiveVersion(versionId: string): boolean {
   const versions = loadVersions();
   const targetVersion = versions.find(v => v.id === versionId);
-  
+
   if (!targetVersion) {
     return false;
   }
-  
+
   // Deactivate all versions
   versions.forEach(v => v.isActive = false);
-  
+
   // Activate target version
   targetVersion.isActive = true;
   setActiveVersionId(versionId);
-  
+
   saveVersions(versions);
   return true;
 }
@@ -195,11 +219,11 @@ export function switchActiveVersion(versionId: string): boolean {
 export function duplicateVersion(versionId: string, newName: string): PAOVersion | null {
   const versions = loadVersions();
   const sourceVersion = versions.find(v => v.id === versionId);
-  
+
   if (!sourceVersion) {
     return null;
   }
-  
+
   const newVersion: PAOVersion = {
     id: generateVersionId(),
     name: newName,
@@ -209,10 +233,10 @@ export function duplicateVersion(versionId: string, newName: string): PAOVersion
     isActive: false,
     items: JSON.parse(JSON.stringify(sourceVersion.items))
   };
-  
+
   versions.push(newVersion);
   saveVersions(versions);
-  
+
   return newVersion;
 }
 
@@ -222,7 +246,7 @@ export function duplicateVersion(versionId: string, newName: string): PAOVersion
  */
 export function createDefaultVersion(items: PAOItem[]): PAOVersion {
   const versions = loadVersions();
-  
+
   const defaultVersion: PAOVersion = {
     id: generateVersionId(),
     name: 'Default',
@@ -232,14 +256,14 @@ export function createDefaultVersion(items: PAOItem[]): PAOVersion {
     isActive: versions.length === 0, // Only active if no other versions exist
     items
   };
-  
+
   versions.push(defaultVersion);
   saveVersions(versions);
-  
+
   if (defaultVersion.isActive) {
     setActiveVersionId(defaultVersion.id);
   }
-  
+
   return defaultVersion;
 }
 
@@ -249,7 +273,7 @@ export function createDefaultVersion(items: PAOItem[]): PAOVersion {
  */
 export function migrateToVersioning(existingItems: PAOItem[]): void {
   const versions = loadVersions();
-  
+
   // Only migrate if no versions exist
   if (versions.length === 0) {
     const defaultVersion: PAOVersion = {
@@ -261,7 +285,7 @@ export function migrateToVersioning(existingItems: PAOItem[]): void {
       isActive: true,
       items: existingItems
     };
-    
+
     saveVersions([defaultVersion]);
     setActiveVersionId(defaultVersion.id);
     console.log('✅ Migrated existing PAO data to versioning system');

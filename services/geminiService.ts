@@ -104,18 +104,18 @@ class GeminiProvider implements ILLMProvider {
     try {
       const parsed = JSON.parse(response.text);
       const suggestions = parsed.suggestions || [];
-      
+
       if (suggestions.length === 0) {
         console.warn('⚠️ [Gemini] No suggestions returned');
       }
-      
+
       // Clean up thinking text from person_description
       return suggestions.map((s: Suggestion) => ({
         ...s,
-        person_description: s.person_description 
+        person_description: s.person_description
           ? enforceWordLimit(cleanLLMThinking(s.person_description), 15)
           : s.person_description,
-        notes: s.notes 
+        notes: s.notes
           ? cleanLLMThinking(s.notes)
           : s.notes
       }));
@@ -194,7 +194,7 @@ class GeminiProvider implements ILLMProvider {
     throw new Error("No image data generated. The model may have filtered the request due to safety settings.");
   }
 
-  async generateMemoryVideo(sceneDescription: string): Promise<{blob: Blob, mimeType: string}> {
+  async generateMemoryVideo(sceneDescription: string): Promise<{ blob: Blob, mimeType: string }> {
     const ai = this.ensureAI();
     const sanitizedScene = sanitizeForAIPrompt(sceneDescription);
 
@@ -208,28 +208,31 @@ class GeminiProvider implements ILLMProvider {
       }
     });
 
+    // Max 30 attempts (2.5 minutes) to prevent infinite loops
+    const MAX_VIDEO_POLL_ATTEMPTS = 30;
+    let attempts = 0;
+
     while (!operation.done) {
+      attempts++;
+      if (attempts >= MAX_VIDEO_POLL_ATTEMPTS) {
+        throw new Error(`Video generation timed out after ${MAX_VIDEO_POLL_ATTEMPTS * 5} seconds`);
+      }
       await new Promise(resolve => setTimeout(resolve, 5000));
-      operation = await ai.operations.getVideosOperation({operation: operation});
+      operation = await ai.operations.getVideosOperation({ operation: operation });
     }
 
     const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
     if (!videoUri) throw new Error("No video URI returned");
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) throw new Error("Gemini API key not configured for video download");
+
     const response = await fetch(`${videoUri}&key=${apiKey}`);
     if (!response.ok) throw new Error("Failed to download video");
 
     const blob = await response.blob();
     return { blob, mimeType: 'video/mp4' };
   }
-}
-
-// Legacy exports for backward compatibility
-const getAI = () => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
 }
 
 export const getPAOSuggestions = async (
@@ -252,7 +255,7 @@ export const generateMemoryImage = async (sceneDescription: string): Promise<str
   return provider.generateMemoryImage(sceneDescription);
 };
 
-export const generateMemoryVideo = async (sceneDescription: string): Promise<{blob: Blob, mimeType: string}> => {
+export const generateMemoryVideo = async (sceneDescription: string): Promise<{ blob: Blob, mimeType: string }> => {
   const provider = new GeminiProvider(import.meta.env.VITE_GEMINI_API_KEY);
   return provider.generateMemoryVideo(sceneDescription);
 };

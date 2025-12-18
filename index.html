@@ -17,16 +17,20 @@
         version: ''
       };
     </script>
-    <!-- Polyfill Buffer: Robust loading -->
-    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+    <!-- Polyfill Buffer: Browser-compatible standalone build -->
+    <script src="https://bundle.run/buffer@6.0.3"></script>
     <script>
       // Ensure Buffer is available globally on window
-      if (typeof window.Buffer === 'undefined' && window.buffer) {
-        window.Buffer = window.buffer.Buffer;
-      }
-      if (window.Buffer) {
-        window.global.Buffer = window.Buffer;
-      }
+      (function() {
+        // bundle.run exposes it as window.buffer
+        if (typeof window.Buffer === 'undefined' && window.buffer && window.buffer.Buffer) {
+          window.Buffer = window.buffer.Buffer;
+        }
+        // Also set on global for compatibility
+        if (window.Buffer) {
+          window.global.Buffer = window.Buffer;
+        }
+      })();
     </script>
 
     <style>

@@ -12,25 +12,26 @@ export class OpenRouterProvider extends OpenAIProvider {
     super(apiKey, model || 'anthropic/claude-3.5-sonnet', 'https://openrouter.ai/api/v1');
   }
 
-  protected async makeRequest(messages: Array<{role: string, content: string}>, jsonMode: boolean = false): Promise<string> {
+  protected async makeRequest(messages: Array<{ role: string, content: string }>, jsonMode: boolean = false): Promise<string> {
     const response = await fetchWithTimeout(
-      `${(this as any).baseUrl}/chat/completions`,
+      `${this.baseUrl}/chat/completions`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(this as any).apiKey}`,
+          'Authorization': `Bearer ${this.apiKey}`,
           'HTTP-Referer': window.location.origin,
           'X-Title': 'MemoDirector'
         },
         body: JSON.stringify({
-          model: (this as any).model,
+          model: this.model,
           messages,
           ...(jsonMode && { response_format: { type: 'json_object' } })
         })
       },
       DEFAULT_LLM_TIMEOUT
     );
+
 
     if (!response.ok) {
       const error = await response.text();

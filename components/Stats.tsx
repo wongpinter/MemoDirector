@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { PAOItem } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Trophy, AlertCircle, Film, CheckCircle2, LayoutGrid, Clapperboard, BookOpen } from 'lucide-react';
+import { Trophy, AlertCircle, Film, CheckCircle2, LayoutGrid, Clapperboard, BookOpen, Cloud, CloudOff } from 'lucide-react';
 import { BackupRestore } from './BackupRestore';
 import { loadVersions, getActiveVersion } from '../services/versionManager';
+import { isAuthenticated, isSyncEnabled, setSyncEnabled } from '../services/auth';
 import type { PAOVersion } from '../types';
 
 interface StatsProps {
@@ -17,12 +18,19 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [displayItems, setDisplayItems] = useState<PAOItem[]>(items);
   const [activeVersionName, setActiveVersionName] = useState<string>('');
+  const [syncEnabled, setSyncEnabledState] = useState(() => isSyncEnabled());
+
+  const handleSyncToggle = () => {
+    const newValue = !syncEnabled;
+    setSyncEnabled(newValue);
+    setSyncEnabledState(newValue);
+  };
 
   // Load versions on mount
   useEffect(() => {
     const loadedVersions = loadVersions();
     setVersions(loadedVersions);
-    
+
     const active = getActiveVersion();
     if (active) {
       setActiveVersionName(active.name);
@@ -46,10 +54,10 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
   const total = displayItems.length;
   const completedCount = displayItems.filter(i => i.completed).length;
   const completedPercentage = Math.round((completedCount / total) * 100) || 0;
-  
+
   // Items with Person but incomplete PAO
   const partialCount = displayItems.filter(i => i.person && !i.completed).length;
-  
+
   // Completed items that have a Scene description
   const withSceneCount = displayItems.filter(i => i.completed && i.scene && i.scene.trim().length > 0).length;
   const scenePercentage = completedCount > 0 ? Math.round((withSceneCount / completedCount) * 100) : 0;
@@ -80,13 +88,13 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
 
   return (
     <div className="py-6 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full mx-auto">
-      
+
       <div className="text-center mb-4">
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-            <Clapperboard className="text-indigo-400 w-6 h-6 sm:w-8 sm:h-8" /> Production Analytics
+          <Clapperboard className="text-indigo-400 w-6 h-6 sm:w-8 sm:h-8" /> Production Analytics
         </h2>
         <p className="text-sm sm:text-base text-slate-400">Studio Report: 00-99 Major System Status</p>
-        
+
         {/* Version Selector for Stats */}
         {versions.length > 0 && (
           <div className="mt-4 flex items-center justify-center gap-2">
@@ -109,158 +117,158 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
 
       {/* 1. Top Level Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard 
-            label="Studio Completion" 
-            value={`${completedPercentage}%`} 
-            sub={`${completedCount} / ${total} Cast Members`}
-            icon={<Trophy className="text-emerald-400" />}
-            color="emerald"
+        <StatCard
+          label="Studio Completion"
+          value={`${completedPercentage}%`}
+          sub={`${completedCount} / ${total} Cast Members`}
+          icon={<Trophy className="text-emerald-400" />}
+          color="emerald"
         />
-        <StatCard 
-            label="Scene Fidelity" 
-            value={`${scenePercentage}%`} 
-            sub={`${withSceneCount} scenes directed`}
-            icon={<Film className="text-purple-400" />}
-            color="purple"
+        <StatCard
+          label="Scene Fidelity"
+          value={`${scenePercentage}%`}
+          sub={`${withSceneCount} scenes directed`}
+          icon={<Film className="text-purple-400" />}
+          color="purple"
         />
-        <StatCard 
-            label="In Pre-Production" 
-            value={partialCount.toString()} 
-            sub="Casting incomplete"
-            icon={<AlertCircle className="text-amber-400" />}
-            color="amber"
+        <StatCard
+          label="In Pre-Production"
+          value={partialCount.toString()}
+          sub="Casting incomplete"
+          icon={<AlertCircle className="text-amber-400" />}
+          color="amber"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
+
         {/* 2. Decade Distribution Chart */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl">
-            <h3 className="text-base sm:text-lg font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">
-                <LayoutGrid size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-400" /> Decade Breakdown
-            </h3>
-            <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={decadeData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                        <XAxis 
-                            dataKey="name" 
-                            stroke="#94a3b8" 
-                            fontSize={12} 
-                            tickLine={false} 
-                            axisLine={false} 
-                        />
-                        <YAxis 
-                            stroke="#94a3b8" 
-                            fontSize={12} 
-                            tickLine={false} 
-                            axisLine={false} 
-                            domain={[0, 10]}
-                        />
-                        <RechartsTooltip 
-                            cursor={{fill: '#334155', opacity: 0.4}}
-                            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#475569', color: '#f8fafc', borderRadius: '8px' }}
-                        />
-                        <Bar 
-                            dataKey="completed" 
-                            radius={[4, 4, 0, 0]}
-                            barSize={20}
-                        >
-                            {decadeData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-            <p className="text-xs text-slate-500 text-center mt-4">
-                Completed scenes per decade group.
-            </p>
+          <h3 className="text-base sm:text-lg font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">
+            <LayoutGrid size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-400" /> Decade Breakdown
+          </h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={decadeData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  stroke="#94a3b8"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={[0, 10]}
+                />
+                <RechartsTooltip
+                  cursor={{ fill: '#334155', opacity: 0.4 }}
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#475569', color: '#f8fafc', borderRadius: '8px' }}
+                />
+                <Bar
+                  dataKey="completed"
+                  radius={[4, 4, 0, 0]}
+                  barSize={20}
+                >
+                  {decadeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-xs text-slate-500 text-center mt-4">
+            Completed scenes per decade group.
+          </p>
         </div>
 
         {/* 3. Milestones & Pie */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
-                    <CheckCircle2 size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-400" /> Director Rank
-                </h3>
-                {/* Mini Pie */}
-                <div className="w-16 h-16">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={pieData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={15}
-                                outerRadius={30}
-                                paddingAngle={5}
-                                dataKey="value"
-                                stroke="none"
-                            >
-                                {pieData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                                ))}
-                            </Pie>
-                        </PieChart>
-                    </ResponsiveContainer>
-                </div>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+              <CheckCircle2 size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-400" /> Director Rank
+            </h3>
+            {/* Mini Pie */}
+            <div className="w-16 h-16">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={15}
+                    outerRadius={30}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
+          </div>
 
-            <div className="space-y-6 flex-1 justify-center flex flex-col">
-                <Milestone label="Indie Director (0-25)" current={completedCount} target={25} />
-                <Milestone label="Studio Regular (26-50)" current={completedCount} target={50} />
-                <Milestone label="A-List Director (51-75)" current={completedCount} target={75} />
-                <Milestone label="Legendary Visionary (76-100)" current={completedCount} target={100} />
-            </div>
+          <div className="space-y-6 flex-1 justify-center flex flex-col">
+            <Milestone label="Indie Director (0-25)" current={completedCount} target={25} />
+            <Milestone label="Studio Regular (26-50)" current={completedCount} target={50} />
+            <Milestone label="A-List Director (51-75)" current={completedCount} target={75} />
+            <Milestone label="Legendary Visionary (76-100)" current={completedCount} target={100} />
+          </div>
         </div>
       </div>
 
       {/* 4. The Matrix Heatmap */}
       <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl">
-         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4">
-            <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
-                <LayoutGrid size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-400" /> The Matrix (00-99)
-            </h3>
-            <div className="flex gap-2 sm:gap-3 text-[10px] sm:text-xs">
-                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-emerald-500"></div> Wrapped</div>
-                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-amber-500"></div> Casting</div>
-                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-slate-700"></div> Empty</div>
-            </div>
-         </div>
-         
-         <div className="grid grid-cols-10 gap-1 sm:gap-1.5 md:gap-2">
-            {displayItems.map((item) => {
-                let statusColor = 'bg-slate-700/50 hover:bg-slate-600';
-                if (item.completed) statusColor = 'bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
-                else if (item.person) statusColor = 'bg-amber-500/80 hover:bg-amber-400';
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4">
+          <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+            <LayoutGrid size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-400" /> The Matrix (00-99)
+          </h3>
+          <div className="flex gap-2 sm:gap-3 text-[10px] sm:text-xs">
+            <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-emerald-500"></div> Wrapped</div>
+            <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-amber-500"></div> Casting</div>
+            <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-slate-700"></div> Empty</div>
+          </div>
+        </div>
 
-                const canEdit = isViewingActive;
+        <div className="grid grid-cols-10 gap-1 sm:gap-1.5 md:gap-2">
+          {displayItems.map((item) => {
+            let statusColor = 'bg-slate-700/50 hover:bg-slate-600';
+            if (item.completed) statusColor = 'bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
+            else if (item.person) statusColor = 'bg-amber-500/80 hover:bg-amber-400';
 
-                return (
-                    <div 
-                        key={item.number}
-                        onClick={() => canEdit && onSelect?.(item.number)}
-                        className={`aspect-square rounded-sm sm:rounded-md flex items-center justify-center text-[9px] sm:text-[10px] md:text-xs font-mono font-bold text-white transition-all duration-300 group relative ${statusColor} ${canEdit ? 'cursor-pointer hover:scale-110 active:scale-95' : 'cursor-default opacity-80'}`}
-                        title={canEdit ? "Click to edit" : "Switch to active version to edit"}
-                    >
-                        {item.number.toString().padStart(2, '0')}
-                        
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 w-max max-w-[150px] bg-slate-900 text-white text-xs p-2 rounded border border-slate-600 shadow-xl pointer-events-none">
-                            <div className="font-bold text-indigo-400">#{item.number.toString().padStart(2, '0')}</div>
-                            {item.person ? (
-                                <div>{item.person}</div>
-                            ) : (
-                                <div className="italic text-slate-500">{canEdit ? 'Click to add' : 'No person'}</div>
-                            )}
-                            {item.completed && <div className="text-emerald-400 text-[10px] mt-1 flex items-center gap-1"><CheckCircle2 size={10} /> Scene Ready</div>}
-                            {!canEdit && <div className="text-amber-400 text-[10px] mt-1">View only</div>}
-                        </div>
-                    </div>
-                );
-            })}
-         </div>
+            const canEdit = isViewingActive;
+
+            return (
+              <div
+                key={item.number}
+                onClick={() => canEdit && onSelect?.(item.number)}
+                className={`aspect-square rounded-sm sm:rounded-md flex items-center justify-center text-[9px] sm:text-[10px] md:text-xs font-mono font-bold text-white transition-all duration-300 group relative ${statusColor} ${canEdit ? 'cursor-pointer hover:scale-110 active:scale-95' : 'cursor-default opacity-80'}`}
+                title={canEdit ? "Click to edit" : "Switch to active version to edit"}
+              >
+                {item.number.toString().padStart(2, '0')}
+
+                {/* Tooltip */}
+                <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 w-max max-w-[150px] bg-slate-900 text-white text-xs p-2 rounded border border-slate-600 shadow-xl pointer-events-none">
+                  <div className="font-bold text-indigo-400">#{item.number.toString().padStart(2, '0')}</div>
+                  {item.person ? (
+                    <div>{item.person}</div>
+                  ) : (
+                    <div className="italic text-slate-500">{canEdit ? 'Click to add' : 'No person'}</div>
+                  )}
+                  {item.completed && <div className="text-emerald-400 text-[10px] mt-1 flex items-center gap-1"><CheckCircle2 size={10} /> Scene Ready</div>}
+                  {!canEdit && <div className="text-amber-400 text-[10px] mt-1">View only</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* 5. Version Comparison (if multiple versions exist) */}
@@ -286,10 +294,10 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
                   const vProgress = Math.round((vCompleted / version.items.length) * 100);
                   const vWithScenes = version.items.filter(i => i.completed && i.scene && i.scene.trim().length > 0).length;
                   const isActive = version.isActive;
-                  
+
                   return (
-                    <tr 
-                      key={version.id} 
+                    <tr
+                      key={version.id}
                       className={`border-b border-slate-800 hover:bg-slate-700/30 transition-colors ${isActive ? 'bg-indigo-900/20' : ''}`}
                     >
                       <td className="py-3 px-3">
@@ -307,7 +315,7 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-2 bg-slate-900 rounded-full overflow-hidden">
-                            <div 
+                            <div
                               className="h-full bg-indigo-600 transition-all"
                               style={{ width: `${vProgress}%` }}
                             ></div>
@@ -330,7 +338,57 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
         </div>
       )}
 
-      {/* 6. Backup & Restore Section */}
+      {/* 6. Cloud Sync Settings (only for authenticated users) */}
+      {isAuthenticated() && (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${syncEnabled ? 'bg-indigo-600/20' : 'bg-slate-700/50'}`}>
+                {syncEnabled ? (
+                  <Cloud className="w-5 h-5 text-indigo-400" />
+                ) : (
+                  <CloudOff className="w-5 h-5 text-slate-500" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-white">Cloud Sync</h3>
+                <p className="text-xs sm:text-sm text-slate-400">
+                  {syncEnabled
+                    ? 'Your data syncs automatically to Firebase'
+                    : 'Data is stored locally only'
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle Switch */}
+            <button
+              onClick={handleSyncToggle}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${syncEnabled ? 'bg-indigo-600' : 'bg-slate-600'
+                }`}
+              role="switch"
+              aria-checked={syncEnabled}
+              title={syncEnabled ? 'Disable cloud sync' : 'Enable cloud sync'}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${syncEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+              />
+            </button>
+          </div>
+
+          {!syncEnabled && (
+            <div className="mt-4 p-3 bg-amber-900/20 border border-amber-700/30 rounded-lg">
+              <p className="text-xs text-amber-300">
+                <strong>Note:</strong> With sync disabled, your data only exists on this device.
+                Enable sync to backup your data and access it from other devices.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 7. Backup & Restore Section */}
       {onRestore && (
         <div className="mt-8">
           <BackupRestore items={items} onRestore={onRestore} />
@@ -344,42 +402,42 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
 // --- Helper Components ---
 
 const StatCard = ({ label, value, sub, icon, color }: { label: string, value: string, sub: string, icon: React.ReactNode, color: string }) => {
-    const colorClasses: Record<string, string> = {
-        emerald: 'bg-emerald-500/10 border-emerald-500/20',
-        purple: 'bg-purple-500/10 border-purple-500/20',
-        amber: 'bg-amber-500/10 border-amber-500/20',
-    };
+  const colorClasses: Record<string, string> = {
+    emerald: 'bg-emerald-500/10 border-emerald-500/20',
+    purple: 'bg-purple-500/10 border-purple-500/20',
+    amber: 'bg-amber-500/10 border-amber-500/20',
+  };
 
-    return (
-        <div className={`p-5 rounded-xl border ${colorClasses[color]} backdrop-blur-sm flex items-start justify-between`}>
-            <div>
-                <div className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{label}</div>
-                <div className="text-2xl font-black text-white mb-1 font-mono">{value}</div>
-                <div className="text-xs text-slate-500">{sub}</div>
-            </div>
-            <div className="p-2 bg-slate-900/50 rounded-lg">
-                {icon}
-            </div>
-        </div>
-    );
+  return (
+    <div className={`p-5 rounded-xl border ${colorClasses[color]} backdrop-blur-sm flex items-start justify-between`}>
+      <div>
+        <div className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{label}</div>
+        <div className="text-2xl font-black text-white mb-1 font-mono">{value}</div>
+        <div className="text-xs text-slate-500">{sub}</div>
+      </div>
+      <div className="p-2 bg-slate-900/50 rounded-lg">
+        {icon}
+      </div>
+    </div>
+  );
 };
 
 const Milestone = ({ label, current, target }: { label: string, current: number, target: number }) => {
-    const isAchieved = current >= target;
-    const progress = Math.min(100, (current / target) * 100);
+  const isAchieved = current >= target;
+  const progress = Math.min(100, (current / target) * 100);
 
-    return (
-        <div>
-            <div className="flex justify-between text-sm mb-1">
-                <span className={`font-medium ${isAchieved ? 'text-emerald-400' : 'text-slate-300'}`}>{label}</span>
-                <span className="text-slate-500 font-mono text-xs">{current}/{target}</span>
-            </div>
-            <div className="h-2.5 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800/50">
-                <div 
-                    className={`h-full transition-all duration-1000 ease-out ${isAchieved ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-indigo-600'}`}
-                    style={{ width: `${progress}%` }}
-                ></div>
-            </div>
-        </div>
-    )
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span className={`font-medium ${isAchieved ? 'text-emerald-400' : 'text-slate-300'}`}>{label}</span>
+        <span className="text-slate-500 font-mono text-xs">{current}/{target}</span>
+      </div>
+      <div className="h-2.5 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800/50">
+        <div
+          className={`h-full transition-all duration-1000 ease-out ${isAchieved ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-indigo-600'}`}
+          style={{ width: `${progress}%` }}
+        ></div>
+      </div>
+    </div>
+  )
 }

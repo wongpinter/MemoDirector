@@ -3,7 +3,7 @@ import { getFirestore, doc, getDoc, setDoc, Firestore, collection, getDocs, dele
 import { getStorage, ref, uploadString, getDownloadURL, FirebaseStorage } from 'firebase/storage';
 import { PAOItem, PAOVersion } from '../types';
 import { TOTAL_NUMBERS, STORAGE_KEYS } from '../constants';
-import { getCurrentUserId, isAnonymousMode } from './auth';
+import { getCurrentUserId, isAnonymousMode, isSyncEnabled } from './auth';
 
 // ------------------------------------------------------------------
 // FIREBASE CONFIG
@@ -24,6 +24,14 @@ let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
 let isFirebaseAvailable = false;
 
+/**
+ * Check if Firebase is ready for sync
+ * Requires: Firebase available, user authenticated, AND sync enabled by user
+ */
+export const isFirebaseReadyForSync = (): boolean => {
+  return Boolean(isFirebaseAvailable && db && !isAnonymousMode() && isSyncEnabled());
+};
+
 // Initialize Firebase safely
 try {
   if (!getApps().length && import.meta.env.VITE_FIREBASE_API_KEY) {
@@ -33,11 +41,11 @@ try {
     isFirebaseAvailable = true;
     console.log("✅ Firebase initialized successfully.");
   } else if (import.meta.env.VITE_FIREBASE_API_KEY) {
-      // Already initialized
-       const app = getApps()[0];
-       db = getFirestore(app);
-       storage = getStorage(app);
-       isFirebaseAvailable = true;
+    // Already initialized
+    const app = getApps()[0];
+    db = getFirestore(app);
+    storage = getStorage(app);
+    isFirebaseAvailable = true;
   } else {
     console.log("ℹ️ Firebase config not found. Using LocalStorage mode.");
   }
@@ -62,18 +70,13 @@ const generateEmptyList = (): PAOItem[] => {
 
 export const loadPAOList = async (): Promise<PAOItem[]> => {
   // 1. Try Firebase (with user-specific path)
-  if (isFirebaseAvailable && db && !isAnonymousMode()) {
-    try {
-      const userId = getCurrentUserId();
-      const docRef = doc(db, "users", userId, "pao", "list");
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        return docSnap.data().items as PAOItem[];
-      }
-    } catch (e) {
-      console.error("Error loading from Firebase", e);
+  try {
+    const firebaseItems = await loadPAOListFromFirebase();
+    if (firebaseItems.length > 0) {
+      return firebaseItems;
     }
+  } catch (e) {
+    // Swallow and fallback to local for standard load path
   }
 
   // 2. Fallback to LocalStorage
@@ -86,23 +89,40 @@ export const loadPAOList = async (): Promise<PAOItem[]> => {
   return generateEmptyList();
 };
 
+export const loadPAOListFromFirebase = async (): Promise<PAOItem[]> => {
+  if (!isFirebaseReadyForSync()) {
+    throw new Error("Firebase not available or user not authenticated");
+  }
+
+  const userId = getCurrentUserId();
+  const docRef = doc(db!, "users", userId, "pao", "list");
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    return docSnap.data().items as PAOItem[];
+  }
+
+  return [];
+};
+
 export const savePAOList = async (items: PAOItem[]) => {
   // Only sync to Firebase (LocalStorage is handled by syncQueue)
-  if (isFirebaseAvailable && db && !isAnonymousMode()) {
-    try {
-      const userId = getCurrentUserId();
-      const docRef = doc(db, "users", userId, "pao", "list");
-      await setDoc(docRef, { 
-        items, 
-        lastUpdated: Date.now() // Use timestamp instead of Date object
-      });
-      console.log("✅ Saved to Firebase");
-    } catch (e) {
-      console.error("❌ Error saving to Firebase", e);
-      throw e; // Re-throw to let caller handle the error
-    }
-  } else {
+  if (!isFirebaseReadyForSync()) {
     console.log("ℹ️ Firebase not available or anonymous mode, skipping cloud sync");
+    throw new Error("Firebase not available for save");
+  }
+
+  try {
+    const userId = getCurrentUserId();
+    const docRef = doc(db!, "users", userId, "pao", "list");
+    await setDoc(docRef, {
+      items,
+      lastUpdated: Date.now() // Use timestamp instead of Date object
+    });
+    console.log("✅ Saved to Firebase");
+  } catch (e) {
+    console.error("❌ Error saving to Firebase", e);
+    throw e; // Re-throw to let caller handle the error
   }
 };
 
@@ -111,60 +131,69 @@ export const savePAOList = async (items: PAOItem[]) => {
  * Returns null if Firebase is not configured.
  */
 export const uploadMedia = async (
-    number: number, 
-    type: 'image' | 'video', 
-    base64Data: string,
-    mimeType: string
+  number: number,
+  type: 'image' | 'video',
+  base64Data: string,
+  mimeType: string
 ): Promise<string | null> => {
-    if (!storage || isAnonymousMode()) {
-        console.warn("Firebase Storage not available or anonymous mode. Cannot upload media.");
-        return null;
-    }
+  if (!storage || isAnonymousMode()) {
+    console.warn("Firebase Storage not available or anonymous mode. Cannot upload media.");
+    return null;
+  }
 
-    try {
-        const userId = getCurrentUserId();
-        const extension = type === 'image' ? 'png' : 'mp4';
-        const path = `users/${userId}/pao/${number}_${type}_${Date.now()}.${extension}`;
-        const storageRef = ref(storage, path);
-        
-        // Strip metadata prefix if present (e.g. "data:image/png;base64,")
-        const cleanBase64 = base64Data.replace(/^data:.*,/, '');
-        
-        await uploadString(storageRef, cleanBase64, 'base64', { contentType: mimeType });
-        const url = await getDownloadURL(storageRef);
-        return url;
-    } catch (e) {
-        console.error(`Error uploading ${type}:`, e);
-        throw e;
-    }
+  try {
+    const userId = getCurrentUserId();
+    const extension = type === 'image' ? 'png' : 'mp4';
+    const path = `users/${userId}/pao/${number}_${type}_${Date.now()}.${extension}`;
+    const storageRef = ref(storage, path);
+
+    // Strip metadata prefix if present (e.g. "data:image/png;base64,")
+    const cleanBase64 = base64Data.replace(/^data:.*,/, '');
+
+    await uploadString(storageRef, cleanBase64, 'base64', { contentType: mimeType });
+    const url = await getDownloadURL(storageRef);
+    return url;
+  } catch (e) {
+    console.error(`Error uploading ${type}:`, e);
+    throw e;
+  }
 }
 
 // ============================================
 // VERSION MANAGEMENT
 // ============================================
 
+export interface LoadVersionsResult {
+  versions: PAOVersion[];
+  error?: string;
+}
+
 /**
  * Load all versions from Firebase
+ * Returns an object with versions array and optional error
  */
-export const loadVersions = async (): Promise<PAOVersion[]> => {
+export const loadVersions = async (): Promise<LoadVersionsResult> => {
   if (!isFirebaseAvailable || !db || isAnonymousMode()) {
-    return [];
+    return { versions: [] };
   }
 
   try {
     const userId = getCurrentUserId();
     const versionsRef = collection(db, "users", userId, "pao_versions");
     const snapshot = await getDocs(versionsRef);
-    
+
     const versions: PAOVersion[] = [];
     snapshot.forEach(doc => {
       versions.push(doc.data() as PAOVersion);
     });
-    
-    return versions;
+
+    return { versions };
   } catch (e) {
     console.error("Error loading versions from Firebase", e);
-    return [];
+    return {
+      versions: [],
+      error: e instanceof Error ? e.message : 'Failed to load versions from Firebase'
+    };
   }
 };
 
