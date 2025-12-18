@@ -3,6 +3,7 @@
 ## How Environment Variables Work with Vite + Firebase Hosting
 
 ### Important Concept:
+
 Firebase Hosting serves **static files only**. Environment variables are **baked into your JavaScript at build time**, not injected at runtime.
 
 ```
@@ -14,13 +15,15 @@ Firebase Hosting serves **static files only**. Environment variables are **baked
 ### 1. Local Development
 
 **File:** `.env`
+
 ```bash
 VITE_GEMINI_API_KEY=your_dev_key_here
-VITE_FIREBASE_API_KEY=your_firebase_key
-# ... other variables
+VITE_SUPABASE_URL=your_project_url
+VITE_SUPABASE_ANON_KEY=your_anon_key
 ```
 
 **Usage:**
+
 ```bash
 npm run dev  # Uses .env
 ```
@@ -28,13 +31,15 @@ npm run dev  # Uses .env
 ### 2. Production (Local Deploy)
 
 **File:** `.env.production`
+
 ```bash
 VITE_GEMINI_API_KEY=your_production_key_here
-VITE_FIREBASE_API_KEY=your_firebase_key
-# ... other variables
+VITE_SUPABASE_URL=your_project_url
+VITE_SUPABASE_ANON_KEY=your_anon_key
 ```
 
 **Usage:**
+
 ```bash
 npm run build  # Uses .env.production
 firebase deploy --only hosting
@@ -50,16 +55,13 @@ firebase deploy --only hosting
 
 3. Add each secret:
    - Name: `VITE_GEMINI_API_KEY`
+
    - Value: `your_actual_key_here`
 
-4. Repeat for all variables:
-   - `VITE_GEMINI_API_KEY`
-   - `VITE_FIREBASE_API_KEY`
-   - `VITE_FIREBASE_AUTH_DOMAIN`
-   - `VITE_FIREBASE_PROJECT_ID`
-   - `VITE_FIREBASE_STORAGE_BUCKET`
-   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
-   - `VITE_FIREBASE_APP_ID`
+4. Repeat for Supabase:
+   - `VITE_SUPABASE_URL`
+
+   - `VITE_SUPABASE_ANON_KEY`
 
 **The workflow files are already configured** to use these secrets!
 
@@ -69,20 +71,22 @@ Vite loads environment variables in this order (later files override earlier):
 
 1. `.env` - Loaded in all cases
 2. `.env.local` - Loaded in all cases, ignored by git
-3. `.env.[mode]` - Only loaded in specified mode (e.g., `.env.production`)
+3. `.env.[mode]` - Only loaded in specified mode (e.g.,  `.env.production`)
 4. `.env.[mode].local` - Only loaded in specified mode, ignored by git
 
 ## Current Setup
 
 ### What's Committed to Git:
-- ✅ `.env.example` - Template with placeholders
-- ✅ `.github/workflows/*.yml` - Configured to use GitHub Secrets
+
+* ✅ `.env.example` - Template with placeholders
+* ✅ `.github/workflows/*.yml` - Configured to use GitHub Secrets
 
 ### What's Ignored by Git:
-- ❌ `.env` - Your local development keys
-- ❌ `.env.production` - Your production keys
-- ❌ `.env.local` - Any local overrides
-- ❌ `.env.*.local` - Any mode-specific local overrides
+
+* ❌ `.env` - Your local development keys
+* ❌ `.env.production` - Your production keys
+* ❌ `.env.local` - Any local overrides
+* ❌ `.env.*.local` - Any mode-specific local overrides
 
 ## Deployment Scenarios
 
@@ -182,13 +186,14 @@ grep -r "your-api-key-prefix" dist/
 ### Different Values in Dev vs Production?
 
 **Solution:**
-- Use `.env` for development
-- Use `.env.production` for production
-- Or use GitHub Secrets for CI/CD
+* Use `.env` for development
+* Use `.env.production` for production
+* Or use GitHub Secrets for CI/CD
 
 ### Need to Update Production Variables?
 
 **If deploying locally:**
+
 ```bash
 # 1. Update .env.production
 # 2. Rebuild
@@ -198,6 +203,7 @@ firebase deploy --only hosting
 ```
 
 **If using GitHub Actions:**
+
 ```bash
 # 1. Update GitHub Secrets
 # 2. Push to main (or re-run workflow)
@@ -209,6 +215,7 @@ git push origin main
 ### 1. Add to TypeScript definitions:
 
 **File:** `vite-env.d.ts`
+
 ```typescript
 interface ImportMetaEnv {
   readonly VITE_GEMINI_API_KEY: string;
@@ -220,18 +227,21 @@ interface ImportMetaEnv {
 ### 2. Add to .env files:
 
 **File:** `.env`
+
 ```bash
 VITE_NEW_VARIABLE=dev_value
 ```
 
 **File:** `.env.production`
+
 ```bash
 VITE_NEW_VARIABLE=prod_value
 ```
 
 ### 3. Add to GitHub Secrets:
-- Go to repository settings
-- Add `VITE_NEW_VARIABLE` secret
+
+* Go to repository settings
+* Add `VITE_NEW_VARIABLE` secret
 
 ### 4. Use in code:
 
@@ -256,9 +266,9 @@ firebase deploy --only hosting
 
 ## Resources
 
-- [Vite Environment Variables](https://vitejs.dev/guide/env-and-mode.html)
-- [Firebase Hosting](https://firebase.google.com/docs/hosting)
-- [GitHub Actions Secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
+* [Vite Environment Variables](https://vitejs.dev/guide/env-and-mode.html)
+* [Firebase Hosting](https://firebase.google.com/docs/hosting)
+* [GitHub Actions Secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
 
 ---
 

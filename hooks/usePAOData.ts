@@ -5,8 +5,7 @@ import { UI_CONSTANTS } from '../constants';
 import {
   loadPAOData,
   saveToLocalStorage,
-  syncToFirebase,
-  startPeriodicSync,
+  syncToRemote,
   hasPendingSync as checkPendingSync,
   getLastSyncTime
 } from '../services/syncQueue';
@@ -15,7 +14,7 @@ import { migrateToVersioning, getActiveVersion } from '../services/versionManage
 export type SyncStatus = 'idle' | 'syncing' | 'saved' | 'error' | 'pending';
 
 /**
- * Custom hook for managing PAO data with LocalStorage-first and periodic Firebase sync
+ * Custom hook for managing PAO data with LocalStorage-first and periodic Remote sync
  */
 export function usePAOData() {
   const [items, setItems] = useState<PAOItem[]>([]);
@@ -83,36 +82,12 @@ export function usePAOData() {
     }
   }, [debouncedItems, loading, isInitialized]);
 
-  // Start periodic sync on mount
-  useEffect(() => {
-    const cleanup = startPeriodicSync(async (status, merged) => {
-      if (status === 'syncing') {
-        setSyncStatus('syncing');
-      } else if (status === 'synced') {
-        // If data was merged, reload from LocalStorage to get the merged result
-        if (merged) {
-          const mergedData = await loadPAOData();
-          setItems(mergedData);
-          console.log('🔄 Reloaded merged data from periodic sync');
-        }
 
-        setSyncStatus('saved');
-        setLastSyncTime(Date.now());
-        setPendingSyncState(checkPendingSync());
-        setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
-      } else if (status === 'error') {
-        setSyncStatus('error');
-        setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
-      }
-    });
-
-    return cleanup;
-  }, []);
 
   // Manual sync function
   const manualSync = useCallback(async () => {
     setSyncStatus('syncing');
-    const result = await syncToFirebase();
+    const result = await syncToRemote();
 
     if (result.success) {
       // If data was merged, reload from LocalStorage to get the merged result
@@ -133,6 +108,17 @@ export function usePAOData() {
 
     return result;
   }, []);
+
+  // Trigger initial sync on mount (after local load) to fetch latest cloud data
+  // This implements the "Sync on Load" strategy to mitigate conflicts by:
+  // 1. Fetching remote data immediately
+  // 2. Merging with local data using timestamp-based resolution (Last Write Wins)
+  useEffect(() => {
+    if (isInitialized) {
+      console.log('🔄 Initializing "Sync on Load" mitigation...');
+      manualSync();
+    }
+  }, [isInitialized, manualSync]);
 
   const updateItem = (updatedItem: PAOItem) => {
     // Add timestamp to track when this item was last modified

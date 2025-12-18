@@ -1,60 +1,22 @@
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc, Firestore, collection, getDocs, deleteDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadString, getDownloadURL, FirebaseStorage } from 'firebase/storage';
+
 import { PAOItem, PAOVersion } from '../types';
 import { TOTAL_NUMBERS, STORAGE_KEYS } from '../constants';
 import { getCurrentUserId, isAnonymousMode, isSyncEnabled } from './auth';
+import { supabase } from './supabase';
 
 // ------------------------------------------------------------------
-// FIREBASE CONFIG
-// Note: Vite uses import.meta.env for environment variables
-// We use a try/catch block to allow the app to run in demo mode 
-// without crashing if keys are missing.
+// SUPABASE CONFIG
 // ------------------------------------------------------------------
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
-};
-
-let db: Firestore | null = null;
-let storage: FirebaseStorage | null = null;
-let isFirebaseAvailable = false;
-
-/**
- * Check if Firebase is ready for sync
- * Requires: Firebase available, user authenticated, AND sync enabled by user
- */
-export const isFirebaseReadyForSync = (): boolean => {
-  return Boolean(isFirebaseAvailable && db && !isAnonymousMode() && isSyncEnabled());
-};
-
-// Initialize Firebase safely
-try {
-  if (!getApps().length && import.meta.env.VITE_FIREBASE_API_KEY) {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    storage = getStorage(app);
-    isFirebaseAvailable = true;
-    console.log("✅ Firebase initialized successfully.");
-  } else if (import.meta.env.VITE_FIREBASE_API_KEY) {
-    // Already initialized
-    const app = getApps()[0];
-    db = getFirestore(app);
-    storage = getStorage(app);
-    isFirebaseAvailable = true;
-  } else {
-    console.log("ℹ️ Firebase config not found. Using LocalStorage mode.");
-  }
-} catch (e) {
-  console.error("❌ Firebase init failed:", e);
-  console.log("ℹ️ Falling back to LocalStorage mode.");
-}
 
 const LOCAL_STORAGE_KEY = STORAGE_KEYS.PAO_DATA;
+
+/**
+ * Check if Supabase is ready for sync
+ * Requires: User authenticated AND sync enabled by user
+ */
+export const isRemoteReadyForSync = (): boolean => {
+  return Boolean(!isAnonymousMode() && isSyncEnabled());
+};
 
 // Generate blank 00-99 list
 const generateEmptyList = (): PAOItem[] => {
@@ -69,14 +31,17 @@ const generateEmptyList = (): PAOItem[] => {
 };
 
 export const loadPAOList = async (): Promise<PAOItem[]> => {
-  // 1. Try Firebase (with user-specific path)
-  try {
-    const firebaseItems = await loadPAOListFromFirebase();
-    if (firebaseItems.length > 0) {
-      return firebaseItems;
+  // 1. Try Supabase (if authenticated and sync enabled)
+  if (isRemoteReadyForSync()) {
+    try {
+      const remoteItems = await loadPAOListFromRemote();
+      if (remoteItems.length > 0) {
+        return remoteItems;
+      }
+    } catch (e) {
+      console.warn("Retrying load from Remote failed, falling back to local:", e);
+      // Swallow and fallback to local
     }
-  } catch (e) {
-    // Swallow and fallback to local for standard load path
   }
 
   // 2. Fallback to LocalStorage
@@ -89,46 +54,64 @@ export const loadPAOList = async (): Promise<PAOItem[]> => {
   return generateEmptyList();
 };
 
-export const loadPAOListFromFirebase = async (): Promise<PAOItem[]> => {
-  if (!isFirebaseReadyForSync()) {
-    throw new Error("Firebase not available or user not authenticated");
+export const loadPAOListFromRemote = async (): Promise<PAOItem[]> => {
+  if (!isRemoteReadyForSync()) {
+    throw new Error("Remote sync not available or user not authenticated");
   }
 
   const userId = getCurrentUserId();
-  const docRef = doc(db!, "users", userId, "pao", "list");
-  const docSnap = await getDoc(docRef);
 
-  if (docSnap.exists()) {
-    return docSnap.data().items as PAOItem[];
+  // We assume a table 'user_pao_lists' with columns: user_id, items (jsonb)
+  const { data, error } = await supabase
+    .from('user_pao_lists')
+    .select('items')
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116 is "The result contains 0 rows"
+    console.error("Error loading PAO list from Supabase", error);
+    throw error;
+  }
+
+  if (data) {
+    return data.items as PAOItem[];
   }
 
   return [];
 };
 
 export const savePAOList = async (items: PAOItem[]) => {
-  // Only sync to Firebase (LocalStorage is handled by syncQueue)
-  if (!isFirebaseReadyForSync()) {
-    console.log("ℹ️ Firebase not available or anonymous mode, skipping cloud sync");
-    throw new Error("Firebase not available for save");
+  // Only sync to Remote if enabled
+  if (!isRemoteReadyForSync()) {
+    console.log("ℹ️ Remote sync not enabled or anonymous mode, skipping cloud sync");
+    throw new Error("Remote not available for save");
   }
 
   try {
     const userId = getCurrentUserId();
-    const docRef = doc(db!, "users", userId, "pao", "list");
-    await setDoc(docRef, {
-      items,
-      lastUpdated: Date.now() // Use timestamp instead of Date object
-    });
-    console.log("✅ Saved to Firebase");
+
+    // Upsert into 'user_pao_lists'
+    const { error } = await supabase
+      .from('user_pao_lists')
+      .upsert({
+        user_id: userId,
+        items: items,
+        last_updated: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+
+    if (error) {
+      throw error;
+    }
+
+    console.log("✅ Saved to Supabase");
   } catch (e) {
-    console.error("❌ Error saving to Firebase", e);
-    throw e; // Re-throw to let caller handle the error
+    console.error("❌ Error saving to Supabase", e);
+    throw e;
   }
 };
 
 /**
- * Uploads a base64 string to Firebase Storage and returns the public download URL.
- * Returns null if Firebase is not configured.
+ * Uploads a base64 string to Supabase Storage and returns the public download URL.
  */
 export const uploadMedia = async (
   number: number,
@@ -136,23 +119,38 @@ export const uploadMedia = async (
   base64Data: string,
   mimeType: string
 ): Promise<string | null> => {
-  if (!storage || isAnonymousMode()) {
-    console.warn("Firebase Storage not available or anonymous mode. Cannot upload media.");
+  if (isAnonymousMode()) {
+    console.warn("Anonymous mode. Cannot upload media.");
     return null;
   }
 
   try {
     const userId = getCurrentUserId();
     const extension = type === 'image' ? 'png' : 'mp4';
-    const path = `users/${userId}/pao/${number}_${type}_${Date.now()}.${extension}`;
-    const storageRef = ref(storage, path);
+    const filename = `${number}_${type}_${Date.now()}.${extension}`;
+    const path = `${userId}/${filename}`; // Store in folder by user_id
 
-    // Strip metadata prefix if present (e.g. "data:image/png;base64,")
-    const cleanBase64 = base64Data.replace(/^data:.*,/, '');
+    // Convert base64 to Blob
+    const base64Response = await fetch(base64Data);
+    const blob = await base64Response.blob();
 
-    await uploadString(storageRef, cleanBase64, 'base64', { contentType: mimeType });
-    const url = await getDownloadURL(storageRef);
-    return url;
+    const { data, error } = await supabase.storage
+      .from('user-media') // Ensure this bucket exists
+      .upload(path, blob, {
+        contentType: mimeType,
+        upsert: true
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('user-media')
+      .getPublicUrl(path);
+
+    return publicUrl;
   } catch (e) {
     console.error(`Error uploading ${type}:`, e);
     throw e;
@@ -169,87 +167,144 @@ export interface LoadVersionsResult {
 }
 
 /**
- * Load all versions from Firebase
- * Returns an object with versions array and optional error
+ * Load all versions from Supabase
  */
 export const loadVersions = async (): Promise<LoadVersionsResult> => {
-  if (!isFirebaseAvailable || !db || isAnonymousMode()) {
+  if (!isRemoteReadyForSync()) {
     return { versions: [] };
   }
 
   try {
     const userId = getCurrentUserId();
-    const versionsRef = collection(db, "users", userId, "pao_versions");
-    const snapshot = await getDocs(versionsRef);
+    const { data, error } = await supabase
+      .from('pao_versions')
+      .select('*')
+      .eq('user_id', userId);
 
-    const versions: PAOVersion[] = [];
-    snapshot.forEach(doc => {
-      versions.push(doc.data() as PAOVersion);
-    });
+    if (error) {
+      throw error;
+    }
+
+    // Map DB fields to PAOVersion (assuming direct match or minimal mapping)
+    // Supabase returns snake_case usually if columns are snake_case, but we can structure table to match or map here.
+    // Assuming table columns: id, name, description, created_at, last_modified, is_active, items
+    // and storing items as jsonb.
+    // Postgres returns keys as is.
+
+    const versions: PAOVersion[] = (data || []).map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      createdAt: new Date(row.created_at).getTime(), // Convert ISO string to timestamp if needed, or keep as number if stored as bigint/number
+      lastModified: new Date(row.last_modified).getTime(),
+      isActive: row.is_active,
+      items: row.items
+    }));
 
     return { versions };
   } catch (e) {
-    console.error("Error loading versions from Firebase", e);
+    console.error("Error loading versions from Supabase", e);
     return {
       versions: [],
-      error: e instanceof Error ? e.message : 'Failed to load versions from Firebase'
+      error: e instanceof Error ? e.message : 'Failed to load versions from Supabase'
     };
   }
 };
 
 /**
- * Save a version to Firebase
+ * Save a version to Supabase
  */
 export const saveVersion = async (version: PAOVersion): Promise<void> => {
-  if (!isFirebaseAvailable || !db || isAnonymousMode()) {
-    console.log("ℹ️ Firebase not available or anonymous mode, skipping version sync");
+  if (!isRemoteReadyForSync()) {
+    console.log("ℹ️ Remote sync not enabled, skipping version save");
     return;
   }
 
   try {
     const userId = getCurrentUserId();
-    const versionRef = doc(db, "users", userId, "pao_versions", version.id);
-    await setDoc(versionRef, version);
-    console.log(`✅ Saved version ${version.name} to Firebase`);
+
+    // Map to DB structure
+    const dbRow = {
+      id: version.id,
+      user_id: userId,
+      name: version.name,
+      description: version.description,
+      created_at: new Date(version.createdAt).toISOString(),
+      last_modified: new Date(version.lastModified).toISOString(),
+      is_active: version.isActive,
+      items: version.items
+    };
+
+    const { error } = await supabase
+      .from('pao_versions')
+      .upsert(dbRow);
+
+    if (error) throw error;
+
+    console.log(`✅ Saved version ${version.name} to Supabase`);
   } catch (e) {
-    console.error("❌ Error saving version to Firebase", e);
+    console.error("❌ Error saving version to Supabase", e);
     throw e;
   }
 };
 
 /**
- * Delete a version from Firebase
+ * Delete a version from Supabase
  */
 export const deleteVersionFromFirebase = async (versionId: string): Promise<void> => {
-  if (!isFirebaseAvailable || !db || isAnonymousMode()) {
-    return;
-  }
+  // Kept name 'deleteVersionFromFirebase' for compatibility if needed, but should probably rename. 
+  // However, to minimize refactor impact on other files calling this, I can keep the export name aligned 
+  // or I should check usages. "deleteVersionFromFirebase" is very specific.
+  // I will rename it to `deleteVersionFromRemote` and alias it or update callers.
+  // Implementation plan said "Migrate Database Operations".
+  // I'll stick to `deleteVersionFromRemote` and update callers if I can, or alias.
+  // Let's implement `deleteVersionFromRemote`.
+  await deleteVersionFromRemote(versionId);
+};
+
+export const deleteVersionFromRemote = async (versionId: string): Promise<void> => {
+  if (!isRemoteReadyForSync()) return;
 
   try {
     const userId = getCurrentUserId();
-    const versionRef = doc(db, "users", userId, "pao_versions", versionId);
-    await deleteDoc(versionRef);
-    console.log(`✅ Deleted version from Firebase`);
+    const { error } = await supabase
+      .from('pao_versions')
+      .delete()
+      .eq('id', versionId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    console.log(`✅ Deleted version from Supabase`);
   } catch (e) {
-    console.error("❌ Error deleting version from Firebase", e);
+    console.error("❌ Error deleting version from Supabase", e);
     throw e;
   }
-};
+}
+
 
 /**
- * Sync all versions to Firebase
+ * Sync all versions to Supabase
  */
 export const syncVersionsToFirebase = async (versions: PAOVersion[]): Promise<void> => {
-  if (!isFirebaseAvailable || !db) {
+  // Alias for compatibility
+  return syncVersionsToRemote(versions);
+}
+
+export const syncVersionsToRemote = async (versions: PAOVersion[]): Promise<void> => {
+  if (!isRemoteReadyForSync()) {
     return;
   }
 
   try {
     const promises = versions.map(version => saveVersion(version));
     await Promise.all(promises);
-    console.log(`✅ Synced ${versions.length} versions to Firebase`);
+    console.log(`✅ Synced ${versions.length} versions to Supabase`);
   } catch (e) {
-    console.error("❌ Error syncing versions to Firebase", e);
+    console.error("❌ Error syncing versions to Supabase", e);
     throw e;
   }
 };
+
+// Backwards compatibility exports if strictly necessary, but better to update calls.
+export const isFirebaseReadyForSync = isRemoteReadyForSync;
+export const loadPAOListFromFirebase = loadPAOListFromRemote;

@@ -1,47 +1,3 @@
-# Quick Start: Enable Authentication (5 Minutes)
-
-## 🚀 Fast Setup
-
-### 1️⃣ Create Firebase Project (2 min)
-
-```
-1. Go to: https://console.firebase.google.com/
-2. Click: "Add project"
-3. Name: "memodirector" (or your choice)
-4. Click: "Create project"
-```
-
-### 2️⃣ Enable Authentication (1 min)
-
-```
-1. Click: "Authentication" (left sidebar)
-2. Click: "Get started"
-3. Click: "Sign-in method" tab
-
-Enable Email/Password:
-   - Click "Email/Password"
-   - Toggle ON
-   - Click "Save"
-
-Enable Google:
-   - Click "Google"
-   - Toggle ON
-   - Select support email
-   - Click "Save"
-```
-
-### 3️⃣ Create Firestore Database (1 min)
-
-```
-1. Click: "Firestore Database" (left sidebar)
-2. Click: "Create database"
-3. Select: "Start in production mode"
-4. Choose: Location (closest to you)
-5. Click: "Enable"
-```
-
-### 4️⃣ Get Configuration (1 min)
-
 ```
 1. Click: ⚙️ (gear icon) → "Project settings"
 2. Scroll to: "Your apps"
@@ -97,11 +53,13 @@ npm run dev
 ## ✅ Verification
 
 Run this command to check your setup:
+
 ```bash
 npm run check-firebase
 ```
 
 You should see:
+
 ```
 ✅ .env file exists
 ✅ VITE_FIREBASE_API_KEY: AIzaSy...
@@ -126,6 +84,7 @@ You should see:
 5. ✅ Dev server restarted after changing `.env`
 
 **Quick fix:**
+
 ```bash
 # 1. Check config
 npm run check-firebase
@@ -153,36 +112,37 @@ npm run dev
 ### "Permission denied" when saving
 
 **Fix:**
+
 ```bash
 firebase deploy --only firestore:rules
 ```
 
 ## 📱 Test Checklist
 
-- [ ] Can click "Sign In" button
-- [ ] Sign up modal opens
-- [ ] Can create account with email/password
-- [ ] Can sign in with email/password
-- [ ] Can sign in with Google
-- [ ] Profile shows user info
-- [ ] Can add API keys
-- [ ] Data saves to cloud
+* [ ] Can click "Sign In" button
+* [ ] Sign up modal opens
+* [ ] Can create account with email/password
+* [ ] Can sign in with email/password
+* [ ] Can sign in with Google
+* [ ] Profile shows user info
+* [ ] Can add API keys
+* [ ] Data saves to cloud
 
 ## 🎯 What You Get
 
 After setup:
-- ✅ Secure user authentication
-- ✅ Each user has private data space
-- ✅ Cross-device sync
-- ✅ Google Sign-In
-- ✅ Password reset
-- ✅ Local API key storage
+* ✅ Secure user authentication
+* ✅ Each user has private data space
+* ✅ Cross-device sync
+* ✅ Google Sign-In
+* ✅ Password reset
+* ✅ Local API key storage
 
 ## 📚 More Help
 
-- **Detailed Guide**: `docs/FIREBASE_SETUP_GUIDE.md`
-- **Full Documentation**: `docs/MULTI_TENANT_AUTH.md`
-- **Firebase Docs**: https://firebase.google.com/docs/auth
+* **Detailed Guide**: `docs/FIREBASE_SETUP_GUIDE.md`
+* **Full Documentation**: `docs/MULTI_TENANT_AUTH.md`
+* **Firebase Docs**: https://firebase.google.com/docs/auth
 
 ## 🆘 Still Having Issues?
 
