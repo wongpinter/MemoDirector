@@ -1,16 +1,16 @@
 /**
  * Sync Queue Service
- * Manages LocalStorage-first saves with periodic Firebase sync
+ * Manages LocalStorage-first saves with periodic Remote (Supabase) sync
  * Updated to support version management
  */
 
 import { PAOItem } from '../types';
 import {
-  savePAOList as saveToFirebase,
-  loadPAOListFromFirebase,
-  syncVersionsToFirebase,
-  loadVersions as loadVersionsFromFirebase,
-  isFirebaseReadyForSync
+  savePAOList as saveToRemote,
+  loadPAOListFromRemote,
+  syncVersionsToRemote,
+  loadVersions as loadVersionsFromRemote,
+  isRemoteReadyForSync
 } from './db';
 import { loadVersions, saveVersions, getActiveVersion, updateVersion } from './versionManager';
 import { getCurrentUserId } from './auth';
@@ -18,7 +18,6 @@ import { getCurrentUserId } from './auth';
 const namespacedKey = (base: string) => `${base}_${getCurrentUserId()}`;
 const SYNC_QUEUE_KEY_BASE = 'pao_sync_queue';
 const LAST_SYNC_KEY_BASE = 'pao_last_sync';
-const SYNC_INTERVAL = 30000; // 30 seconds
 const LEGACY_KEYS = {
   data: 'pao_data',
   versions: 'pao_versions',
@@ -167,14 +166,14 @@ function mergeItems(localItems: PAOItem[], remoteItems: PAOItem[]): PAOItem[] {
 }
 
 /**
- * Sync queued items to Firebase with conflict resolution
+ * Sync queued items to Remote with conflict resolution
  * Now syncs all versions
  */
-export async function syncToFirebase(): Promise<{ success: boolean; error?: string; merged?: boolean }> {
+export async function syncToRemote(): Promise<{ success: boolean; error?: string; merged?: boolean }> {
   try {
     migrateLegacyDataIfNeeded();
-    if (!isFirebaseReadyForSync()) {
-      return { success: false, error: 'Firebase not available for sync' };
+    if (!isRemoteReadyForSync()) {
+      return { success: false, error: 'Remote sync not available' };
     }
 
     const queueData = localStorage.getItem(namespacedKey(SYNC_QUEUE_KEY_BASE));
@@ -183,7 +182,7 @@ export async function syncToFirebase(): Promise<{ success: boolean; error?: stri
       // Still sync versions even if no queue
       const localVersions = loadVersions();
       if (localVersions.length > 0) {
-        await syncVersionsToFirebase(localVersions);
+        await syncVersionsToRemote(localVersions);
       }
       return { success: true };
     }
@@ -191,10 +190,10 @@ export async function syncToFirebase(): Promise<{ success: boolean; error?: stri
     const queueItem: SyncQueueItem = JSON.parse(queueData);
     const localItems = queueItem.items;
 
-    // Fetch current Firebase data to check for conflicts
+    // Fetch current Remote data to check for conflicts
     let remoteItems: PAOItem[] = [];
     try {
-      remoteItems = await loadPAOListFromFirebase();
+      remoteItems = await loadPAOListFromRemote();
     } catch (e) {
       console.log('ℹ️ No remote data found, proceeding with local data');
     }
@@ -207,12 +206,12 @@ export async function syncToFirebase(): Promise<{ success: boolean; error?: stri
     const wasMerged = remoteItems.length > 0 &&
       JSON.stringify(mergedItems) !== JSON.stringify(localItems);
 
-    // Save merged result to Firebase (legacy)
-    await saveToFirebase(mergedItems);
+    // Save merged result to Remote
+    await saveToRemote(mergedItems);
 
     // Sync all versions
     const localVersions = loadVersions();
-    await syncVersionsToFirebase(localVersions);
+    await syncVersionsToRemote(localVersions);
 
     // If data was merged, update LocalStorage with the merged result
     if (wasMerged) {
@@ -230,10 +229,10 @@ export async function syncToFirebase(): Promise<{ success: boolean; error?: stri
     localStorage.removeItem(namespacedKey(SYNC_QUEUE_KEY_BASE));
     localStorage.setItem(namespacedKey(LAST_SYNC_KEY_BASE), Date.now().toString());
 
-    console.log('✅ Synced to Firebase');
+    console.log('✅ Synced to Remote');
     return { success: true, merged: wasMerged };
   } catch (error) {
-    console.error('❌ Failed to sync to Firebase:', error);
+    console.error('❌ Failed to sync to Remote:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -241,33 +240,7 @@ export async function syncToFirebase(): Promise<{ success: boolean; error?: stri
   }
 }
 
-/**
- * Start periodic sync (call this once on app init)
- */
-export function startPeriodicSync(onSyncStatusChange?: (status: 'syncing' | 'synced' | 'error', merged?: boolean) => void): () => void {
-  const intervalId = setInterval(async () => {
-    if (hasPendingSync()) {
-      if (!isFirebaseReadyForSync()) {
-        onSyncStatusChange?.('error');
-        return;
-      }
 
-      console.log('🔄 Starting periodic sync...');
-      onSyncStatusChange?.('syncing');
-
-      const result = await syncToFirebase();
-
-      if (result.success) {
-        onSyncStatusChange?.('synced', result.merged);
-      } else {
-        onSyncStatusChange?.('error');
-      }
-    }
-  }, SYNC_INTERVAL);
-
-  // Return cleanup function
-  return () => clearInterval(intervalId);
-}
 
 /**
  * Load data with LocalStorage-first strategy and conflict resolution
@@ -280,16 +253,16 @@ export async function loadPAOData(): Promise<PAOItem[]> {
   if (localData) {
     console.log('✅ Loaded from LocalStorage (active version)');
 
-    // Sync from Firebase in background to check for updates
+    // Sync from Remote in background to check for updates
     try {
-      // Load versions from Firebase
-      const { versions: firebaseVersions } = await loadVersionsFromFirebase();
-      if (firebaseVersions.length > 0) {
+      // Load versions from Remote
+      const { versions: remoteVersions } = await loadVersionsFromRemote();
+      if (remoteVersions.length > 0) {
         // Merge versions (simplified - just update if remote is newer)
         const localVersions = loadVersions();
         let hasUpdates = false;
 
-        firebaseVersions.forEach(remoteVersion => {
+        remoteVersions.forEach(remoteVersion => {
           const localVersion = localVersions.find(v => v.id === remoteVersion.id);
           if (!localVersion || remoteVersion.lastModified > localVersion.lastModified) {
             hasUpdates = true;
@@ -297,8 +270,8 @@ export async function loadPAOData(): Promise<PAOItem[]> {
         });
 
         if (hasUpdates) {
-          console.log('🔄 Newer versions found in Firebase');
-          saveVersions(firebaseVersions);
+          console.log('🔄 Newer versions found in Remote');
+          saveVersions(remoteVersions);
           const activeVersion = getActiveVersion();
           if (activeVersion) {
             return activeVersion.items;
@@ -306,44 +279,44 @@ export async function loadPAOData(): Promise<PAOItem[]> {
         }
       }
 
-      // Also check legacy Firebase data
-      const firebaseData = await loadPAOListFromFirebase();
-      if (firebaseData && firebaseData.length > 0) {
-        const mergedData = mergeItems(localData, firebaseData);
+      // Also check remote List data (if we still use it alongside versions)
+      const remoteData = await loadPAOListFromRemote();
+      if (remoteData && remoteData.length > 0) {
+        const mergedData = mergeItems(localData, remoteData);
 
         if (JSON.stringify(mergedData) !== JSON.stringify(localData)) {
-          console.log('🔄 Merged newer data from Firebase');
+          console.log('🔄 Merged newer data from Remote');
           saveToLocalStorage(mergedData);
           return mergedData;
         }
       }
     } catch (error) {
-      console.log('ℹ️ Firebase not available, using LocalStorage');
+      console.log('ℹ️ Remote sync not available, using LocalStorage');
     }
 
     return localData;
   }
 
-  // 2. If no local data, try Firebase
+  // 2. If no local data, try Remote
   try {
     // Try loading versions first
-    const { versions: firebaseVersions } = await loadVersionsFromFirebase();
-    if (firebaseVersions.length > 0) {
-      saveVersions(firebaseVersions);
+    const { versions: remoteVersions } = await loadVersionsFromRemote();
+    if (remoteVersions.length > 0) {
+      saveVersions(remoteVersions);
       const activeVersion = getActiveVersion();
       if (activeVersion) {
         return activeVersion.items;
       }
     }
 
-    // Fallback to legacy data
-    const firebaseData = await loadPAOListFromFirebase();
-    if (firebaseData && firebaseData.length > 0) {
-      saveToLocalStorage(firebaseData);
-      return firebaseData;
+    // Fallback to List data
+    const remoteData = await loadPAOListFromRemote();
+    if (remoteData && remoteData.length > 0) {
+      saveToLocalStorage(remoteData);
+      return remoteData;
     }
   } catch (error) {
-    console.log('ℹ️ Firebase not available');
+    console.log('ℹ️ Remote not available');
   }
 
   // 3. Return empty array if nothing found

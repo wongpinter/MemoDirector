@@ -3,7 +3,7 @@ import { User, LogOut, Mail, Calendar, Shield, Key, X } from 'lucide-react';
 import { getCurrentUser, signOut, getUserDisplayName, getUserEmail, isAnonymousMode } from '../services/auth';
 import { APIKeysSettings } from './APIKeysSettings';
 import { DataPull } from './DataPull';
-import { User as FirebaseUser } from 'firebase/auth';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ isOpen, onClose, onSignOut }: UserProfileProps) {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'apikeys'>('profile');
 
   useEffect(() => {
@@ -66,8 +66,8 @@ export function UserProfile({ isOpen, onClose, onSignOut }: UserProfileProps) {
           <button
             onClick={() => setActiveTab('profile')}
             className={`flex-1 px-6 py-3 font-semibold transition-colors ${activeTab === 'profile'
-                ? 'text-indigo-400 border-b-2 border-indigo-400'
-                : 'text-slate-400 hover:text-slate-300'
+              ? 'text-indigo-400 border-b-2 border-indigo-400'
+              : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             <User size={18} className="inline mr-2" />
@@ -76,8 +76,8 @@ export function UserProfile({ isOpen, onClose, onSignOut }: UserProfileProps) {
           <button
             onClick={() => setActiveTab('apikeys')}
             className={`flex-1 px-6 py-3 font-semibold transition-colors ${activeTab === 'apikeys'
-                ? 'text-indigo-400 border-b-2 border-indigo-400'
-                : 'text-slate-400 hover:text-slate-300'
+              ? 'text-indigo-400 border-b-2 border-indigo-400'
+              : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             <Key size={18} className="inline mr-2" />
@@ -129,12 +129,12 @@ export function UserProfile({ isOpen, onClose, onSignOut }: UserProfileProps) {
                       <div className="flex items-center gap-3 text-sm">
                         <Calendar size={16} className="text-slate-500" />
                         <span className="text-slate-400">Member since:</span>
-                        <span className="text-white">{formatDate(user?.metadata.creationTime || null)}</span>
+                        <span className="text-white">{formatDate(user?.created_at || null)}</span>
                       </div>
                       <div className="flex items-center gap-3 text-sm">
                         <Shield size={16} className="text-slate-500" />
                         <span className="text-slate-400">User ID:</span>
-                        <span className="text-white font-mono text-xs">{user?.uid || 'N/A'}</span>
+                        <span className="text-white font-mono text-xs">{user?.id || 'N/A'}</span>
                       </div>
                     </div>
                   </div>

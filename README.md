@@ -55,17 +55,13 @@ VITE_GEMINI_API_KEY=your_google_ai_studio_key_here
 
 If you skip this, the app will default to **LocalStorage**, which works perfectly for a single device.
 
-1.  Set up your own cloud storage / remote persistence service.
-2.  Obtain the necessary configuration keys.
+1.  Create a project at [Supabase](https://supabase.com).
+2.  Obtain the **Project URL** and **Anon Key**.
 3.  Copy the configuration values into your `.env` file:
 
 ```env
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_STORAGE_BUCKET=...
-VITE_FIREBASE_MESSAGING_SENDER_ID=...
-VITE_FIREBASE_APP_ID=...
+VITE_SUPABASE_URL=your_project_url
+VITE_SUPABASE_ANON_KEY=your_anon_key
 ```
 
 > **Note:** All environment variables now use the `VITE_` prefix as per Vite conventions. The application code ( `services/db.ts` ) automatically detects if these keys are present. If not, it falls back to LocalStorage without errors.
