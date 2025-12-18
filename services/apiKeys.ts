@@ -4,6 +4,8 @@
  * Keys are NEVER sent to the server - they stay on the user's device
  */
 
+import { encrypt, decrypt, isEncrypted } from './encryption';
+
 export interface APIKeys {
   gemini?: string;
   openai?: string;
@@ -31,7 +33,7 @@ const PREFERRED_PROVIDER_KEY = 'user_preferred_provider';
 export function saveAPIKey(config: APIKeyConfig): void {
   try {
     const keys = loadAPIKeys();
-    
+
     if (config.provider === 'ollama') {
       keys.ollama = {
         baseUrl: config.baseUrl || 'http://localhost:11434',
@@ -39,17 +41,39 @@ export function saveAPIKey(config: APIKeyConfig): void {
       };
     } else {
       if (config.key) {
-        keys[config.provider] = config.key;
+        // valid key?
+        keys[config.provider] = encrypt(config.key);
       }
     }
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
-    
+
+    // keys object is what we save to localStorage
+    // For other keys (that we didn't just update), we need to make sure we don't double-encrypt
+    // But wait - loadAPIKeys returns DECRYPTED keys. 
+    // So 'keys' variable right now contains decrypted keys.
+    // When we save, we need to encrypt ALL of them?
+    // 
+    // Wait, loadAPIKeys() returns the usable (decrypted) keys.
+    // So 'keys' variable holds plain text keys.
+    // We need to re-encrypt EVERYTHING before saving.
+
+    const keysToSave: any = { ...keys };
+
+    // Encrypt all string keys before saving
+    const providers: (keyof APIKeys)[] = ['gemini', 'openai', 'openrouter'];
+    providers.forEach(p => {
+      const val = keysToSave[p];
+      if (typeof val === 'string') {
+        keysToSave[p] = encrypt(val);
+      }
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
+
     // Save model preference
     if (config.model) {
       saveModelPreference(config.provider, config.model);
     }
-    
+
     console.log(`✅ API key saved for ${config.provider}`);
   } catch (error) {
     console.error('Failed to save API key:', error);
@@ -64,7 +88,48 @@ export function loadAPIKeys(): APIKeys {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const keys = JSON.parse(stored);
+      // Migrate legacy keys if needed
+      let hasLegacy = false;
+
+      const processedKeys: APIKeys = {};
+
+      // Handle Ollama specially since it's an object
+      if (keys.ollama) {
+        processedKeys.ollama = keys.ollama;
+      }
+
+      // Process string keys (providers)
+      const providers: ('gemini' | 'openai' | 'openrouter')[] = ['gemini', 'openai', 'openrouter'];
+      providers.forEach(provider => {
+        const value = keys[provider];
+        if (typeof value === 'string') {
+          if (!isEncrypted(value)) {
+            // It's a legacy plain text key
+            hasLegacy = true;
+            // Encrypt it for the return value so the app works consistent
+            // We'll save the encrypted version back to disk below
+          }
+          // Always decrypt for usage in the app
+          processedKeys[provider] = decrypt(value as string);
+        }
+      });
+
+      // If we found legacy keys, re-save them encrypted immediately
+      if (hasLegacy) {
+        // We need to construct what we want to save
+        const keysToSave = { ...keys };
+        providers.forEach(provider => {
+          const value = keysToSave[provider];
+          if (typeof value === 'string' && !isEncrypted(value)) {
+            keysToSave[provider] = encrypt(value);
+          }
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
+        console.log('🔒 Legacy API keys migrated to encrypted storage');
+      }
+
+      return processedKeys;
     }
     return {};
   } catch (error) {
@@ -117,12 +182,12 @@ export function hasAnyAPIKey(): boolean {
  */
 export function getAvailableProvider(): 'gemini' | 'openai' | 'openrouter' | 'ollama' | null {
   const keys = loadAPIKeys();
-  
+
   if (keys.gemini) return 'gemini';
   if (keys.openai) return 'openai';
   if (keys.openrouter) return 'openrouter';
   if (keys.ollama) return 'ollama';
-  
+
   return null;
 }
 
@@ -183,7 +248,7 @@ export function validateAPIKey(provider: 'gemini' | 'openai' | 'openrouter', key
   if (!key || key.trim().length === 0) {
     return false;
   }
-  
+
   // Basic format validation
   switch (provider) {
     case 'gemini':

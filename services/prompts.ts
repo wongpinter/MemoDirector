@@ -35,7 +35,7 @@ const DIGIT_SOUNDS: Record<string, string> = {
   '5': 'l',
   '6': 'j, sh, ch, soft g',
   '7': 'k, hard c, hard g, q',
-  '8': 'f, v',
+  '8': 'f, v, ph',
   '9': 'p, b'
 };
 
