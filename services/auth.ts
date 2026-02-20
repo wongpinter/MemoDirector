@@ -10,13 +10,15 @@ import { STORAGE_KEYS } from '../constants';
 
 let currentUser: User | null = null;
 let broadcastAuthChange: ((user: User | null) => void) | null = null;
+let isAuthInitialized = false;
+let authInitPromise: Promise<void> | null = null;
 
 /**
- * Initialize Auth listener
+ * Initialize Auth listener and return unsubscribe function
  */
-export function initializeAuth(): void {
+export function initializeAuth(): () => void {
   // Set up listener for auth state changes
-  supabase.auth.onAuthStateChange((event, session) => {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user || null;
 
     if (event === 'SIGNED_IN') {
@@ -28,15 +30,44 @@ export function initializeAuth(): void {
     if (broadcastAuthChange) {
       broadcastAuthChange(currentUser);
     }
+    
+    isAuthInitialized = true;
   });
 
-  // Initial check
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    currentUser = session?.user || null;
-    if (broadcastAuthChange) {
-      broadcastAuthChange(currentUser);
-    }
-  });
+  // Initial check with error handling
+  if (!authInitPromise) {
+    authInitPromise = supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        currentUser = session?.user || null;
+        if (broadcastAuthChange) {
+          broadcastAuthChange(currentUser);
+        }
+        isAuthInitialized = true;
+      })
+      .catch((err) => {
+        console.error('❌ Auth initialization error:', err);
+        isAuthInitialized = true; // Mark as initialized even on error
+      });
+  }
+
+  return () => subscription.unsubscribe();
+}
+
+/**
+ * Check if auth is initialized
+ */
+export function isAuthReady(): boolean {
+  return isAuthInitialized;
+}
+
+/**
+ * Wait for auth to initialize
+ */
+export async function waitForAuth(): Promise<void> {
+  if (isAuthInitialized) return;
+  if (authInitPromise) {
+    await authInitPromise;
+  }
 }
 
 /**
@@ -77,10 +108,6 @@ export async function signUp(email: string, password: string, displayName?: stri
   if (error) {
     console.error('❌ Sign up failed:', error);
     throw new Error(error.message);
-  }
-
-  if (!data.user) {
-    throw new Error('Sign up successful but no user returned');
   }
 
   if (!data.user) {
@@ -146,10 +173,15 @@ export function onAuthChange(callback: (user: User | null) => void): () => void 
   broadcastAuthChange = callback;
   if (!currentUser) {
     // If we don't have a user yet, try to get it from session immediately to fire callback
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      currentUser = session?.user || null;
-      callback(currentUser);
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        currentUser = session?.user || null;
+        callback(currentUser);
+      })
+      .catch((err) => {
+        console.error('❌ Error getting session:', err);
+        callback(null); // Call with null on error
+      });
   } else {
     callback(currentUser);
   }

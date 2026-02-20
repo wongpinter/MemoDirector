@@ -19,7 +19,7 @@ export function exportToCSV(items: PAOItem[]): string {
   ];
 
   // Escape CSV field (handle commas, quotes, newlines)
-  const escapeField = (field: any): string => {
+  const escapeField = (field: string | number | boolean | null | undefined): string => {
     if (field === null || field === undefined) return '';
     const str = String(field);
     // If field contains comma, quote, or newline, wrap in quotes and escape quotes

@@ -35,7 +35,10 @@ export const detectConflicts = (items: PAOItem[]): Map<number, ItemConflicts> =>
       if (!personIndex.has(normalized)) {
         personIndex.set(normalized, []);
       }
-      personIndex.get(normalized)!.push(item.number);
+      const personList = personIndex.get(normalized);
+      if (personList) {
+        personList.push(item.number);
+      }
     }
     
     if (item.action) {
@@ -43,7 +46,10 @@ export const detectConflicts = (items: PAOItem[]): Map<number, ItemConflicts> =>
       if (!actionIndex.has(normalized)) {
         actionIndex.set(normalized, []);
       }
-      actionIndex.get(normalized)!.push(item.number);
+      const actionList = actionIndex.get(normalized);
+      if (actionList) {
+        actionList.push(item.number);
+      }
     }
     
     if (item.object) {
@@ -51,7 +57,10 @@ export const detectConflicts = (items: PAOItem[]): Map<number, ItemConflicts> =>
       if (!objectIndex.has(normalized)) {
         objectIndex.set(normalized, []);
       }
-      objectIndex.get(normalized)!.push(item.number);
+      const objectList = objectIndex.get(normalized);
+      if (objectList) {
+        objectList.push(item.number);
+      }
     }
   });
   

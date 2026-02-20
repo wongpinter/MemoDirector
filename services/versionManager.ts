@@ -5,6 +5,7 @@
 
 import { PAOVersion, PAOItem } from '../types';
 import { getCurrentUserId } from './auth';
+import { safeJsonParse } from '../utils';
 
 const VERSIONS_KEY = 'pao_versions';
 const ACTIVE_VERSION_KEY = 'pao_active_version';
@@ -34,19 +35,23 @@ function generateEmptyItems(): PAOItem[] {
 
 /**
  * Load all versions from LocalStorage
+ * Ensures isActive flags are synchronized with active version ID
  */
 export function loadVersions(): PAOVersion[] {
   try {
     const key = namespacedKey(VERSIONS_KEY);
     const data = localStorage.getItem(key);
     if (data) {
-      return JSON.parse(data);
+      const versions = safeJsonParse<PAOVersion[]>(data, []);
+      syncActiveFlags(versions);
+      return versions;
     }
 
     const legacy = localStorage.getItem(VERSIONS_KEY);
     if (legacy) {
-      const parsed = JSON.parse(legacy);
-      localStorage.setItem(key, legacy);
+      const parsed = safeJsonParse<PAOVersion[]>(legacy, []);
+      syncActiveFlags(parsed);
+      localStorage.setItem(key, JSON.stringify(parsed));
       localStorage.removeItem(VERSIONS_KEY);
       return parsed;
     }
@@ -55,6 +60,24 @@ export function loadVersions(): PAOVersion[] {
   } catch (error) {
     console.error('Failed to load versions:', error);
     return [];
+  }
+}
+
+/**
+ * Synchronize isActive flags with the active version ID from localStorage
+ * This ensures single source of truth (the localStorage ID)
+ */
+function syncActiveFlags(versions: PAOVersion[]): void {
+  const activeId = getActiveVersionId();
+  
+  versions.forEach(v => {
+    v.isActive = v.id === activeId;
+  });
+  
+  // If no active ID but we have versions, set the first as active
+  if (!activeId && versions.length > 0) {
+    versions[0].isActive = true;
+    setActiveVersionId(versions[0].id);
   }
 }
 
@@ -98,16 +121,18 @@ export function setActiveVersionId(versionId: string): void {
 
 /**
  * Get the active version
+ * Uses localStorage ID as single source of truth
  */
 export function getActiveVersion(): PAOVersion | null {
   const versions = loadVersions();
   const activeId = getActiveVersionId();
 
-  if (activeId) {
-    return versions.find(v => v.id === activeId) || null;
+  if (!activeId) {
+    // If no active ID, return the first version marked as active
+    return versions.find(v => v.isActive) || null;
   }
 
-  return versions.find(v => v.isActive) || null;
+  return versions.find(v => v.id === activeId) || null;
 }
 
 /**

@@ -14,10 +14,14 @@ import {
 } from './db';
 import { loadVersions, saveVersions, getActiveVersion, updateVersion } from './versionManager';
 import { getCurrentUserId } from './auth';
+import { safeSetItem, safeGetItem, safeRemoveItem, getStorageUsage, StorageResult, safeJsonParse } from '../utils';
 
 const namespacedKey = (base: string) => `${base}_${getCurrentUserId()}`;
 const SYNC_QUEUE_KEY_BASE = 'pao_sync_queue';
 const LAST_SYNC_KEY_BASE = 'pao_last_sync';
+
+// Sync lock to prevent race conditions
+let isSyncing = false;
 const LEGACY_KEYS = {
   data: 'pao_data',
   versions: 'pao_versions',
@@ -39,12 +43,12 @@ const migrateLegacyDataIfNeeded = () => {
   ];
 
   pairs.forEach(([legacyKey, scopedKey]) => {
-    const hasScoped = localStorage.getItem(scopedKey);
-    const legacyValue = localStorage.getItem(legacyKey);
+    const hasScoped = safeGetItem(scopedKey);
+    const legacyValue = safeGetItem(legacyKey);
 
     if (!hasScoped && legacyValue) {
-      localStorage.setItem(scopedKey, legacyValue);
-      localStorage.removeItem(legacyKey);
+      safeSetItem(scopedKey, legacyValue);
+      safeRemoveItem(legacyKey);
     }
   });
 };
@@ -56,9 +60,9 @@ export interface SyncQueueItem {
 
 /**
  * Save items to LocalStorage immediately (fast, offline-safe)
- * Now updates the active version
+ * Now updates the active version with quota handling
  */
-export function saveToLocalStorage(items: PAOItem[]): void {
+export function saveToLocalStorage(items: PAOItem[]): StorageResult {
   try {
     migrateLegacyDataIfNeeded();
 
@@ -69,19 +73,39 @@ export function saveToLocalStorage(items: PAOItem[]): void {
     }
 
     const dataKey = namespacedKey('pao_data');
-    localStorage.setItem(dataKey, JSON.stringify(items));
+    const dataStr = JSON.stringify(items);
+    
+    // Check storage usage before saving
+    const { percentage } = getStorageUsage();
+    if (percentage > 90) {
+      console.warn('⚠️ LocalStorage usage at ${percentage}%');
+    }
+    
+    const result = safeSetItem(dataKey, dataStr);
+    if (!result.success) {
+      console.error('❌ Failed to save to LocalStorage:', result.error);
+      return result;
+    }
 
     // Add to sync queue
     const queueItem: SyncQueueItem = {
       timestamp: Date.now(),
       items
     };
-    localStorage.setItem(namespacedKey(SYNC_QUEUE_KEY_BASE), JSON.stringify(queueItem));
+    const queueResult = safeSetItem(namespacedKey(SYNC_QUEUE_KEY_BASE), JSON.stringify(queueItem));
+    if (!queueResult.success) {
+      console.error('❌ Failed to save to sync queue:', queueResult.error);
+      return queueResult;
+    }
 
     console.log('✅ Saved to LocalStorage');
+    return { success: true };
   } catch (error) {
     console.error('❌ Failed to save to LocalStorage:', error);
-    throw error;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
   }
 }
 
@@ -101,9 +125,9 @@ export function loadFromLocalStorage(): PAOItem[] | null {
     }
 
     // Fallback to namespaced storage
-    const data = localStorage.getItem(dataKey);
+    const data = safeGetItem(dataKey);
     if (data) {
-      return JSON.parse(data);
+      return safeJsonParse<PAOItem[]>(data, []);
     }
     return null;
   } catch (error) {
@@ -117,7 +141,7 @@ export function loadFromLocalStorage(): PAOItem[] | null {
  */
 export function hasPendingSync(): boolean {
   migrateLegacyDataIfNeeded();
-  const queueData = localStorage.getItem(namespacedKey(SYNC_QUEUE_KEY_BASE));
+  const queueData = safeGetItem(namespacedKey(SYNC_QUEUE_KEY_BASE));
   return !!queueData;
 }
 
@@ -126,7 +150,7 @@ export function hasPendingSync(): boolean {
  */
 export function getLastSyncTime(): number | null {
   migrateLegacyDataIfNeeded();
-  const lastSync = localStorage.getItem(namespacedKey(LAST_SYNC_KEY_BASE));
+  const lastSync = safeGetItem(namespacedKey(LAST_SYNC_KEY_BASE));
   return lastSync ? parseInt(lastSync, 10) : null;
 }
 
@@ -168,15 +192,24 @@ function mergeItems(localItems: PAOItem[], remoteItems: PAOItem[]): PAOItem[] {
 /**
  * Sync queued items to Remote with conflict resolution
  * Now syncs all versions
+ * Uses a lock to prevent race conditions from concurrent sync operations
  */
 export async function syncToRemote(): Promise<{ success: boolean; error?: string; merged?: boolean }> {
+  // Prevent concurrent sync operations
+  if (isSyncing) {
+    console.log('⏳ Sync already in progress, skipping...');
+    return { success: false, error: 'Sync already in progress' };
+  }
+
+  isSyncing = true;
+  
   try {
     migrateLegacyDataIfNeeded();
     if (!isRemoteReadyForSync()) {
       return { success: false, error: 'Remote sync not available' };
     }
 
-    const queueData = localStorage.getItem(namespacedKey(SYNC_QUEUE_KEY_BASE));
+    const queueData = safeGetItem(namespacedKey(SYNC_QUEUE_KEY_BASE));
 
     if (!queueData) {
       // Still sync versions even if no queue
@@ -187,7 +220,7 @@ export async function syncToRemote(): Promise<{ success: boolean; error?: string
       return { success: true };
     }
 
-    const queueItem: SyncQueueItem = JSON.parse(queueData);
+    const queueItem = safeJsonParse<SyncQueueItem>(queueData, { timestamp: Date.now(), items: [] });
     const localItems = queueItem.items;
 
     // Fetch current Remote data to check for conflicts
@@ -216,7 +249,7 @@ export async function syncToRemote(): Promise<{ success: boolean; error?: string
     // If data was merged, update LocalStorage with the merged result
     if (wasMerged) {
       console.log('🔄 Data merged from remote, updating LocalStorage');
-      localStorage.setItem(namespacedKey('pao_data'), JSON.stringify(mergedItems));
+      safeSetItem(namespacedKey('pao_data'), JSON.stringify(mergedItems));
 
       // Update active version
       const activeVersion = getActiveVersion();
@@ -226,8 +259,8 @@ export async function syncToRemote(): Promise<{ success: boolean; error?: string
     }
 
     // Clear queue and update last sync time
-    localStorage.removeItem(namespacedKey(SYNC_QUEUE_KEY_BASE));
-    localStorage.setItem(namespacedKey(LAST_SYNC_KEY_BASE), Date.now().toString());
+    safeRemoveItem(namespacedKey(SYNC_QUEUE_KEY_BASE));
+    safeSetItem(namespacedKey(LAST_SYNC_KEY_BASE), Date.now().toString());
 
     console.log('✅ Synced to Remote');
     return { success: true, merged: wasMerged };
@@ -237,6 +270,9 @@ export async function syncToRemote(): Promise<{ success: boolean; error?: string
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     };
+  } finally {
+    // Always release the lock
+    isSyncing = false;
   }
 }
 

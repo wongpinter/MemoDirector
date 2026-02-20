@@ -13,7 +13,7 @@ import { PAOItem } from './types';
 import { usePAOData } from './hooks';
 import { ToastProvider } from './contexts';
 import { initializeAuth, onAuthChange, isAuthenticated, getUserDisplayName } from './services/auth';
-import { User } from 'firebase/auth';
+import { User } from '@supabase/supabase-js';
 
 enum Tab {
   GRID = 'GRID',
@@ -34,24 +34,38 @@ export default function App() {
 
   // Initialize auth and listen for changes
   useEffect(() => {
-    initializeAuth();
-    const unsubscribe = onAuthChange((user) => {
+    const unsubscribeAuth = initializeAuth();
+    const unsubscribeChange = onAuthChange((user) => {
       setUser(user);
     });
-    return unsubscribe;
+    
+    // Cleanup both subscriptions
+    return () => {
+      unsubscribeAuth();
+      unsubscribeChange();
+    };
   }, []);
 
   const handleVersionSwitch = () => {
     reloadActiveVersion();
   };
 
-  const handleAuthSuccess = () => {
-    // Reload data after authentication
-    window.location.reload();
+  const handleAuthSuccess = async () => {
+    // Reload data after authentication without full page reload
+    try {
+      await manualSync(); // Sync to fetch user's data
+      await reloadActiveVersion(); // Reload active version
+      setShowAuthModal(false);
+    } catch (error) {
+      console.error('Failed to reload data after auth:', error);
+      // Fallback to full reload if sync fails
+      window.location.reload();
+    }
   };
 
   const handleSignOut = () => {
-    // Reload app after sign out
+    // Clear local state and reload
+    // Full reload is acceptable here as user is signing out
     window.location.reload();
   };
 

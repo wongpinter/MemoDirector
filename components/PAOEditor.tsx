@@ -194,15 +194,28 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
     setError(null);
     try {
         const base64 = await generateMemoryImage(scene);
+        
+        // Check base64 size before storing
+        const sizeInBytes = (base64.length * 3) / 4; // Rough base64 size estimation
+        const maxSizeBytes = 500 * 1024; // 500KB limit for local storage
+        
+        if (sizeInBytes > maxSizeBytes) {
+          setError('Image too large for local storage. Uploading to cloud storage...');
+        }
+        
         // Upload
         const uploadedUrl = await uploadMedia(number, 'image', base64, 'image/png');
         
         if (uploadedUrl) {
             setImageUrl(uploadedUrl);
         } else {
-            // Fallback for offline/no-firebase: just set base64 for immediate preview (won't save persistence efficiently)
-            setImageUrl(base64);
-            setError("Storage not connected. Image saved locally (might not persist).");
+            // Fallback for offline/no-storage: only if image is small enough
+            if (sizeInBytes <= maxSizeBytes) {
+              setImageUrl(base64);
+              setError("Storage not connected. Image saved locally (temporary - won't sync).");
+            } else {
+              setError("Image too large and cloud storage unavailable. Please try again when online.");
+            }
         }
     } catch (e: any) {
         console.error(e);
@@ -248,7 +261,11 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
                   setError("Storage not connected. Cannot save video.");
               }
               setIsGenMedia(null);
-          }
+          };
+          reader.onerror = () => {
+              setError("Failed to read video file.");
+              setIsGenMedia(null);
+          };
       } catch (e) {
           console.error(e);
           setError("Failed to generate video. Ensure you selected a paid project key.");

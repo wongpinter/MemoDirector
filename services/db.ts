@@ -3,6 +3,7 @@ import { PAOItem, PAOVersion } from '../types';
 import { TOTAL_NUMBERS, STORAGE_KEYS } from '../constants';
 import { getCurrentUserId, isAnonymousMode, isSyncEnabled } from './auth';
 import { supabase } from './supabase';
+import { safeJsonParse, categorizeSupabaseError, ErrorCategory } from '../utils';
 
 // ------------------------------------------------------------------
 // SUPABASE CONFIG
@@ -47,7 +48,7 @@ export const loadPAOList = async (): Promise<PAOItem[]> => {
   // 2. Fallback to LocalStorage
   const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (localData) {
-    return JSON.parse(localData);
+    return safeJsonParse<PAOItem[]>(localData, generateEmptyList());
   }
 
   // 3. Return empty
@@ -69,7 +70,15 @@ export const loadPAOListFromRemote = async (): Promise<PAOItem[]> => {
     .single();
 
   if (error && error.code !== 'PGRST116') { // PGRST116 is "The result contains 0 rows"
-    console.error("Error loading PAO list from Supabase", error);
+    const categorized = categorizeSupabaseError(error);
+    console.error(`Error loading PAO list from Supabase [${categorized.category}]:`, categorized.message);
+    
+    if (categorized.category === ErrorCategory.AUTH) {
+      console.error('Authentication error - user may need to sign in again');
+    } else if (categorized.category === ErrorCategory.NETWORK) {
+      console.error('Network error - will retry when connection is restored');
+    }
+    
     throw error;
   }
 

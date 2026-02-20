@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PAOItem } from '../types';
 import { useDebouncedValue } from './useDebouncedValue';
 import { UI_CONSTANTS } from '../constants';
@@ -10,6 +10,7 @@ import {
   getLastSyncTime
 } from '../services/syncQueue';
 import { migrateToVersioning, getActiveVersion } from '../services/versionManager';
+import { waitForAuth } from '../services/auth';
 
 export type SyncStatus = 'idle' | 'syncing' | 'saved' | 'error' | 'pending';
 
@@ -23,15 +24,29 @@ export function usePAOData() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
   const [pendingSyncState, setPendingSyncState] = useState(false); // Reactive pending state
+  
+  // Ref to track active timeouts for cleanup
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   // Debounce items for auto-save
   const debouncedItems = useDebouncedValue(items, UI_CONSTANTS.DEBOUNCE_DELAY);
+  
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current = [];
+    };
+  }, []);
 
-  // Load data on mount
+  // Load data on mount - wait for auth first
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
+        // Wait for auth to initialize before loading data
+        await waitForAuth();
+        
         const data = await loadPAOData();
 
         // Migrate to versioning if needed
@@ -62,11 +77,26 @@ export function usePAOData() {
     // Don't save during initial load or before initialization
     if (loading || !isInitialized) return;
 
+    let errorTimeout: NodeJS.Timeout | null = null;
+    let pendingTimeout: NodeJS.Timeout | null = null;
+
     try {
-      saveToLocalStorage(debouncedItems);
+      const result = saveToLocalStorage(debouncedItems);
+      if (!result.success) {
+        if (result.quotaExceeded) {
+          console.error('⚠️ Storage quota exceeded. Consider backing up and clearing old data.');
+          setSyncStatus('error');
+        } else {
+          console.error('Failed to save to LocalStorage:', result.error);
+          setSyncStatus('error');
+        }
+        errorTimeout = setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
+        return;
+      }
+      
       setSyncStatus('pending');
       setPendingSyncState(true);
-      setTimeout(() => {
+      pendingTimeout = setTimeout(() => {
         const pending = checkPendingSync();
         setPendingSyncState(pending);
         if (pending) {
@@ -78,8 +108,14 @@ export function usePAOData() {
     } catch (error) {
       console.error('Failed to save to LocalStorage:', error);
       setSyncStatus('error');
-      setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
+      errorTimeout = setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
     }
+
+    // Cleanup timeouts on unmount or when dependencies change
+    return () => {
+      if (errorTimeout) clearTimeout(errorTimeout);
+      if (pendingTimeout) clearTimeout(pendingTimeout);
+    };
   }, [debouncedItems, loading, isInitialized]);
 
 
@@ -93,21 +129,24 @@ export function usePAOData() {
       // If data was merged, reload from LocalStorage to get the merged result
       if (result.merged) {
         const mergedData = await loadPAOData();
-        setItems(mergedData);
+        setItems(mergedData); // Safe: setItems is stable, mergedData is fresh
         console.log('🔄 Reloaded merged data');
       }
 
       setSyncStatus('saved');
       setLastSyncTime(Date.now());
       setPendingSyncState(checkPendingSync());
-      setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
+      
+      const timeout = setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
+      timeoutRefs.current.push(timeout);
     } else {
       setSyncStatus('error');
-      setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
+      const timeout = setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
+      timeoutRefs.current.push(timeout);
     }
 
     return result;
-  }, []);
+  }, [setSyncStatus, setItems, setLastSyncTime, setPendingSyncState]);
 
   // Trigger initial sync on mount (after local load) to fetch latest cloud data
   // This implements the "Sync on Load" strategy to mitigate conflicts by:
@@ -118,7 +157,8 @@ export function usePAOData() {
       console.log('🔄 Initializing "Sync on Load" mitigation...');
       manualSync();
     }
-  }, [isInitialized, manualSync]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized]); // manualSync intentionally omitted to prevent re-runs
 
   const updateItem = (updatedItem: PAOItem) => {
     // Add timestamp to track when this item was last modified

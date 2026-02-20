@@ -5,8 +5,19 @@
  */
 
 import { encrypt, decrypt, isEncrypted } from './encryption';
+import { safeJsonParse } from '../utils';
 
 export interface APIKeys {
+  gemini?: string;
+  openai?: string;
+  openrouter?: string;
+  ollama?: {
+    baseUrl: string;
+    model: string;
+  };
+}
+
+interface EncryptedAPIKeys {
   gemini?: string;
   openai?: string;
   openrouter?: string;
@@ -56,14 +67,14 @@ export function saveAPIKey(config: APIKeyConfig): void {
     // So 'keys' variable holds plain text keys.
     // We need to re-encrypt EVERYTHING before saving.
 
-    const keysToSave: any = { ...keys };
+    const keysToSave: EncryptedAPIKeys = { ...keys };
 
     // Encrypt all string keys before saving
     const providers: (keyof APIKeys)[] = ['gemini', 'openai', 'openrouter'];
     providers.forEach(p => {
       const val = keysToSave[p];
       if (typeof val === 'string') {
-        keysToSave[p] = encrypt(val);
+        (keysToSave[p] as string) = encrypt(val);
       }
     });
 
@@ -88,7 +99,7 @@ export function loadAPIKeys(): APIKeys {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const keys = JSON.parse(stored);
+      const keys = safeJsonParse<EncryptedAPIKeys>(stored, {});
       // Migrate legacy keys if needed
       let hasLegacy = false;
 
@@ -122,7 +133,7 @@ export function loadAPIKeys(): APIKeys {
         providers.forEach(provider => {
           const value = keysToSave[provider];
           if (typeof value === 'string' && !isEncrypted(value)) {
-            keysToSave[provider] = encrypt(value);
+            (keysToSave[provider] as string) = encrypt(value);
           }
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(keysToSave));
@@ -211,7 +222,7 @@ function loadModelPreferences(): Record<string, string> {
   try {
     const stored = localStorage.getItem(MODEL_STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      return safeJsonParse<Record<string, string>>(stored, {});
     }
     return {};
   } catch (error) {
@@ -318,7 +329,10 @@ export function exportAPIKeys(): string {
  */
 export function importAPIKeys(jsonString: string): void {
   try {
-    const keys = JSON.parse(jsonString);
+    const keys = safeJsonParse<EncryptedAPIKeys>(jsonString, {});
+    if (Object.keys(keys).length === 0) {
+      throw new Error('Invalid API keys format');
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
     console.log('✅ API keys imported');
   } catch (error) {
