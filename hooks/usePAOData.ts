@@ -7,194 +7,134 @@ import {
   saveToLocalStorage,
   syncToRemote,
   hasPendingSync as checkPendingSync,
-  getLastSyncTime
+  getLastSyncTime,
 } from '../services/syncQueue';
-import { migrateToVersioning, getActiveVersion } from '../services/versionManager';
+import { load as storeLoad } from '../services/paoStore';
 import { waitForAuth } from '../services/auth';
 
 export type SyncStatus = 'idle' | 'syncing' | 'saved' | 'error' | 'pending';
 
-/**
- * Custom hook for managing PAO data with LocalStorage-first and periodic Remote sync
- */
-export function usePAOData() {
+// ── usePAOItems — item loading + auto-save + mutation ────────────
+
+export function usePAOItems() {
   const [items, setItems] = useState<PAOItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false); // Guard for auto-save
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const debouncedItems = useDebouncedValue(items, UI_CONSTANTS.DEBOUNCE_DELAY);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        await waitForAuth();
+        const data = await loadPAOData();
+        setItems(data);
+      } catch (e) {
+        console.error('Failed to load data:', e);
+      } finally {
+        setLoading(false);
+        setIsInitialized(true);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (loading || !isInitialized) return;
+    saveToLocalStorage(debouncedItems);
+  }, [debouncedItems, loading, isInitialized]);
+
+  const updateItem = useCallback((updatedItem: PAOItem) => {
+    setItems(prev =>
+      prev.map(item =>
+        item.number === updatedItem.number
+          ? { ...updatedItem, lastModified: Date.now() }
+          : item,
+      ),
+    );
+  }, []);
+
+  const updateItems = useCallback((newItems: PAOItem[]) => {
+    setItems(newItems);
+  }, []);
+
+  const reloadActiveVersion = useCallback(() => {
+    setItems(storeLoad());
+  }, []);
+
+  return { items, loading, updateItem, updateItems, reloadActiveVersion };
+}
+
+// ── usePAOSync — cloud sync status + trigger ─────────────────────
+
+export function usePAOSync(ready: boolean, onMerged?: () => void) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
-  const [pendingSyncState, setPendingSyncState] = useState(false); // Reactive pending state
-  
-  // Ref to track active timeouts for cleanup
+  const [pendingSync, setPendingSync] = useState(false);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
-  // Debounce items for auto-save
-  const debouncedItems = useDebouncedValue(items, UI_CONSTANTS.DEBOUNCE_DELAY);
-  
-  // Cleanup all timeouts on unmount
   useEffect(() => {
     return () => {
-      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current.forEach(clearTimeout);
       timeoutRefs.current = [];
     };
   }, []);
 
-  // Load data on mount - wait for auth first
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        // Wait for auth to initialize before loading data
-        await waitForAuth();
-        
-        const data = await loadPAOData();
-
-        // Migrate to versioning if needed
-        migrateToVersioning(data);
-
-        // Load from active version
-        const activeVersion = getActiveVersion();
-        if (activeVersion) {
-          setItems(activeVersion.items);
-        } else {
-          setItems(data);
-        }
-
-        setLastSyncTime(getLastSyncTime());
-        setPendingSyncState(checkPendingSync());
-      } catch (error) {
-        console.error('Failed to load data:', error);
-      } finally {
-        setLoading(false);
-        setIsInitialized(true); // Mark as initialized after first load
-      }
-    }
-    loadData();
-  }, []);
-
-  // Auto-save to LocalStorage when items change (debounced)
-  useEffect(() => {
-    // Don't save during initial load or before initialization
-    if (loading || !isInitialized) return;
-
-    let errorTimeout: NodeJS.Timeout | null = null;
-    let pendingTimeout: NodeJS.Timeout | null = null;
-
-    try {
-      const result = saveToLocalStorage(debouncedItems);
-      if (!result.success) {
-        if (result.quotaExceeded) {
-          console.error('⚠️ Storage quota exceeded. Consider backing up and clearing old data.');
-          setSyncStatus('error');
-        } else {
-          console.error('Failed to save to LocalStorage:', result.error);
-          setSyncStatus('error');
-        }
-        errorTimeout = setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
-        return;
-      }
-      
-      setSyncStatus('pending');
-      setPendingSyncState(true);
-      pendingTimeout = setTimeout(() => {
-        const pending = checkPendingSync();
-        setPendingSyncState(pending);
-        if (pending) {
-          setSyncStatus('pending');
-        } else {
-          setSyncStatus('idle');
-        }
-      }, 1000);
-    } catch (error) {
-      console.error('Failed to save to LocalStorage:', error);
-      setSyncStatus('error');
-      errorTimeout = setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
-    }
-
-    // Cleanup timeouts on unmount or when dependencies change
-    return () => {
-      if (errorTimeout) clearTimeout(errorTimeout);
-      if (pendingTimeout) clearTimeout(pendingTimeout);
-    };
-  }, [debouncedItems, loading, isInitialized]);
-
-
-
-  // Manual sync function
   const manualSync = useCallback(async () => {
     setSyncStatus('syncing');
     const result = await syncToRemote();
 
     if (result.success) {
-      // If data was merged, reload from LocalStorage to get the merged result
-      if (result.merged) {
-        const mergedData = await loadPAOData();
-        setItems(mergedData); // Safe: setItems is stable, mergedData is fresh
-        console.log('🔄 Reloaded merged data');
-      }
-
+      if (result.merged) onMerged?.();
       setSyncStatus('saved');
       setLastSyncTime(Date.now());
-      setPendingSyncState(checkPendingSync());
-      
-      const timeout = setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
-      timeoutRefs.current.push(timeout);
+      setPendingSync(checkPendingSync());
     } else {
       setSyncStatus('error');
-      const timeout = setTimeout(() => setSyncStatus('idle'), UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION);
-      timeoutRefs.current.push(timeout);
     }
+
+    const t = setTimeout(
+      () => setSyncStatus('idle'),
+      UI_CONSTANTS.SAVE_STATUS_DISPLAY_DURATION,
+    );
+    timeoutRefs.current.push(t);
 
     return result;
-  }, [setSyncStatus, setItems, setLastSyncTime, setPendingSyncState]);
+  }, [onMerged]);
 
-  // Trigger initial sync on mount (after local load) to fetch latest cloud data
-  // This implements the "Sync on Load" strategy to mitigate conflicts by:
-  // 1. Fetching remote data immediately
-  // 2. Merging with local data using timestamp-based resolution (Last Write Wins)
+  // Sync-on-mount (also fires on ready transition)
   useEffect(() => {
-    if (isInitialized) {
-      console.log('🔄 Initializing "Sync on Load" mitigation...');
-      manualSync();
-    }
+    if (ready) manualSync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInitialized]); // manualSync intentionally omitted to prevent re-runs
+  }, [ready]);
 
-  const updateItem = (updatedItem: PAOItem) => {
-    // Add timestamp to track when this item was last modified
-    const itemWithTimestamp = {
-      ...updatedItem,
-      lastModified: Date.now()
-    };
-
-    setItems(prev =>
-      prev.map(item =>
-        item.number === itemWithTimestamp.number ? itemWithTimestamp : item
-      )
-    );
-  };
-
-  const updateItems = (newItems: PAOItem[]) => {
-    setItems(newItems);
-  };
-
-  const reloadActiveVersion = useCallback(async () => {
-    const activeVersion = getActiveVersion();
-    if (activeVersion) {
-      setItems(activeVersion.items);
-    }
+  // Init
+  useEffect(() => {
+    setLastSyncTime(getLastSyncTime());
+    setPendingSync(checkPendingSync());
   }, []);
+
+  return { syncStatus, lastSyncTime, hasPendingSync: pendingSync, manualSync };
+}
+
+// ── usePAOData — composed, backward-compat interface ─────────────
+
+export function usePAOData() {
+  const { items, loading, updateItem, updateItems, reloadActiveVersion } = usePAOItems();
+  const { syncStatus, lastSyncTime, hasPendingSync, manualSync } = usePAOSync(
+    !loading,
+    reloadActiveVersion,
+  );
 
   return {
     items,
     loading,
     syncStatus,
     lastSyncTime,
-    hasPendingSync: pendingSyncState,
+    hasPendingSync,
     manualSync,
     updateItem,
     updateItems,
     reloadActiveVersion,
   };
 }
-

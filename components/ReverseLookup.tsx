@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, AlertTriangle, CheckCircle2, Sparkles, Edit3, Zap, UserSearch, Clapperboard, Ear } from 'lucide-react';
 import { calculateMajorNumber, MajorResult } from '../constants';
 import { PAOItem } from '../types';
+import { useToast } from '../contexts';
 
 interface ReverseLookupProps {
   items: PAOItem[];
@@ -12,7 +13,7 @@ interface ReverseLookupProps {
 export const ReverseLookup: React.FC<ReverseLookupProps> = ({ items, onAssign, onQuickAdd }) => {
   const [input, setInput] = useState('');
   const [results, setResults] = useState<MajorResult[]>([]);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { showToast } = useToast();
   
   // Debounce analysis
   useEffect(() => {
@@ -105,9 +106,8 @@ export const ReverseLookup: React.FC<ReverseLookupProps> = ({ items, onAssign, o
                                     <button 
                                         onClick={() => {
                                             onQuickAdd(result.number, input);
-                                            setSuccessMsg(`Cast "${input}" as #${formattedNumber}`);
+                                            showToast(`Cast "${input}" as #${formattedNumber}`, 'success');
                                             setInput('');
-                                            setTimeout(() => setSuccessMsg(null), 3000);
                                         }}
                                         className={`py-2 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg ${isOccupied ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/20' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20'}`}
                                     >
@@ -122,18 +122,10 @@ export const ReverseLookup: React.FC<ReverseLookupProps> = ({ items, onAssign, o
             </div>
         ) : (
             <div className="text-center py-12 text-slate-500">
-                {successMsg ? (
-                    <div className="bg-emerald-900/30 text-emerald-400 border border-emerald-500/30 p-4 rounded-xl inline-flex items-center gap-2 animate-in fade-in zoom-in-95">
-                        <CheckCircle2 size={20} /> {successMsg}
-                    </div>
-                ) : (
-                    <>
-                        <div className="font-mono text-sm mb-2 opacity-50">Ready for audition...</div>
-                        <p className="text-xs max-w-xs mx-auto opacity-50">
-                            Try multi-strategy names like "Tony Stark" (10 or 12) or "Sun Wukong" (07 or 02).
-                        </p>
-                    </>
-                )}
+                <div className="font-mono text-sm mb-2 opacity-50">Ready for audition...</div>
+                <p className="text-xs max-w-xs mx-auto opacity-50">
+                    Try multi-strategy names like "Tony Stark" (10 or 12) or "Sun Wukong" (07 or 02).
+                </p>
             </div>
         )}
       </div>

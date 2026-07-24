@@ -33,3 +33,4 @@ dist-ssr
 .firebase/
 firebase-debug.log
 firestore-debug.log
+.pi/

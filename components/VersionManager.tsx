@@ -2,14 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { PAOVersion } from '../types';
 import {
-  loadVersions,
+  listVersions,
   createVersion,
-  updateVersion,
+  renameVersion,
   deleteVersion,
-  switchActiveVersion,
+  switchVersion,
   duplicateVersion,
   getActiveVersion
-} from '../services/versionManager';
+} from '../services/paoStore';
 
 interface VersionManagerProps {
   onVersionSwitch: () => void;
@@ -29,7 +29,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const loadData = () => {
-    setVersions(loadVersions());
+    setVersions(listVersions());
   };
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
   };
 
   const handleSwitchVersion = (versionId: string) => {
-    switchActiveVersion(versionId);
+    switchVersion(versionId);
     loadData();
     onVersionSwitch();
   };
@@ -88,10 +88,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
   const handleSaveEdit = () => {
     if (!editingVersion || !editName.trim()) return;
 
-    updateVersion(editingVersion, {
-      name: editName.trim(),
-      description: editDesc.trim() || undefined
-    });
+    renameVersion(editingVersion, editName.trim(), editDesc.trim() || undefined);
     setEditingVersion(null);
     loadData();
   };

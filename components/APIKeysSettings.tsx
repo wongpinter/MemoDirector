@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Key, Eye, EyeOff, Save, Trash2, AlertCircle, CheckCircle, Info, Star } from 'lucide-react';
+import { useToast } from '../contexts';
 import {
-  saveAPIKey,
-  loadAPIKeys,
-  deleteAPIKey,
+  setKey,
+  getKeys,
+  removeKey,
   maskAPIKey,
   validateAPIKey,
   getDefaultModel,
   getPreferredProvider,
   setPreferredProvider,
   APIKeys
-} from '../services/apiKeys';
+} from '../services/llmConfig';
 
 export function APIKeysSettings() {
   const [keys, setKeys] = useState<APIKeys>({});
@@ -19,7 +20,7 @@ export function APIKeysSettings() {
   const [tempKeys, setTempKeys] = useState<Record<string, string>>({});
   const [tempModels, setTempModels] = useState<Record<string, string>>({});
   const [preferredProvider, setPreferredProviderState] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadKeys();
@@ -27,14 +28,14 @@ export function APIKeysSettings() {
   }, []);
 
   const loadKeys = () => {
-    const loadedKeys = loadAPIKeys();
+    const loadedKeys = getKeys();
     setKeys(loadedKeys);
   };
 
   const handleSetPreferred = (provider: 'gemini' | 'openai' | 'openrouter' | 'ollama') => {
     setPreferredProvider(provider);
     setPreferredProviderState(provider);
-    showMessage('success', `${provider.toUpperCase()} set as preferred provider`);
+    showToast(`${provider.toUpperCase()} set as preferred provider`, 'success');
   };
 
   const handleSave = (provider: 'gemini' | 'openai' | 'openrouter') => {
@@ -42,17 +43,17 @@ export function APIKeysSettings() {
     const model = tempModels[provider];
 
     if (!key || key.trim() === '') {
-      showMessage('error', 'Please enter an API key');
+      showToast('Please enter an API key', 'error');
       return;
     }
 
     if (!validateAPIKey(provider, key)) {
-      showMessage('error', 'Invalid API key format');
+      showToast('Invalid API key format', 'error');
       return;
     }
 
     try {
-      saveAPIKey({
+      setKey({
         provider,
         key,
         model: model || getDefaultModel(provider)
@@ -61,20 +62,20 @@ export function APIKeysSettings() {
       loadKeys();
       setEditMode({ ...editMode, [provider]: false });
       setTempKeys({ ...tempKeys, [provider]: '' });
-      showMessage('success', `${provider.toUpperCase()} API key saved successfully`);
+      showToast(`${provider.toUpperCase()} API key saved`, 'success');
     } catch (error) {
-      showMessage('error', 'Failed to save API key');
+      showToast('Failed to save API key', 'error');
     }
   };
 
   const handleDelete = (provider: 'gemini' | 'openai' | 'openrouter' | 'ollama') => {
     if (confirm(`Delete ${provider.toUpperCase()} API key?`)) {
       try {
-        deleteAPIKey(provider);
+        removeKey(provider);
         loadKeys();
-        showMessage('success', `${provider.toUpperCase()} API key deleted`);
+        showToast(`${provider.toUpperCase()} API key deleted`, 'success');
       } catch (error) {
-        showMessage('error', 'Failed to delete API key');
+        showToast('Failed to delete API key', 'error');
       }
     }
   };
@@ -84,7 +85,7 @@ export function APIKeysSettings() {
     const model = tempModels['ollama'] || 'llama3.2';
 
     try {
-      saveAPIKey({
+      setKey({
         provider: 'ollama',
         baseUrl,
         model
@@ -92,15 +93,10 @@ export function APIKeysSettings() {
       
       loadKeys();
       setEditMode({ ...editMode, ollama: false });
-      showMessage('success', 'Ollama configuration saved');
+      showToast('Ollama configuration saved', 'success');
     } catch (error) {
-      showMessage('error', 'Failed to save Ollama configuration');
+      showToast('Failed to save Ollama configuration', 'error');
     }
-  };
-
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage(null), 5000);
   };
 
   const toggleShow = (provider: string) => {
@@ -130,18 +126,6 @@ export function APIKeysSettings() {
           </div>
         </div>
       </div>
-
-      {/* Message */}
-      {message && (
-        <div className={`p-4 rounded-lg border flex items-start gap-3 ${
-          message.type === 'success' 
-            ? 'bg-emerald-950/30 border-emerald-600/50 text-emerald-300'
-            : 'bg-rose-950/30 border-rose-600/50 text-rose-300'
-        }`}>
-          {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-          <p className="text-sm">{message.text}</p>
-        </div>
-      )}
 
       {/* Info Box */}
       <div className="bg-blue-950/20 border border-blue-600/30 rounded-lg p-4 flex items-start gap-3">

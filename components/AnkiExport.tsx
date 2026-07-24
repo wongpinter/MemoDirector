@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PAOItem, PAOVersion } from '../types';
 import { getPhoneticsForNumber } from '../constants';
 import { Download, Copy, FileText, ChevronLeft, ChevronRight, Rotate3D, BookOpen, Package } from 'lucide-react';
-import { loadVersions, getActiveVersion } from '../services/versionManager';
+import { listVersions, getActiveVersion } from '../services/paoStore';
 
 interface AnkiExportProps {
   items: PAOItem[];
@@ -21,7 +21,7 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
 
   // Load versions on mount
   useEffect(() => {
-    const loadedVersions = loadVersions();
+    const loadedVersions = listVersions();
     setVersions(loadedVersions);
     
     const active = getActiveVersion();

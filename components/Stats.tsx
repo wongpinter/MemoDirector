@@ -1,34 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { PAOItem } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Trophy, AlertCircle, Film, CheckCircle2, LayoutGrid, Clapperboard, BookOpen, Cloud, CloudOff } from 'lucide-react';
-import { BackupRestore } from './BackupRestore';
-import { loadVersions, getActiveVersion } from '../services/versionManager';
-import { isAuthenticated, isSyncEnabled, setSyncEnabled } from '../services/auth';
+import { Trophy, AlertCircle, Film, CheckCircle2, LayoutGrid, Clapperboard, BookOpen } from 'lucide-react';
+import { listVersions, getActiveVersion } from '../services/paoStore';
 import type { PAOVersion } from '../types';
 
 interface StatsProps {
   items: PAOItem[];
   onSelect?: (number: number) => void;
-  onRestore?: (items: PAOItem[]) => void;
 }
 
-export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
+export const Stats: React.FC<StatsProps> = ({ items, onSelect }) => {
   const [versions, setVersions] = useState<PAOVersion[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [displayItems, setDisplayItems] = useState<PAOItem[]>(items);
   const [activeVersionName, setActiveVersionName] = useState<string>('');
-  const [syncEnabled, setSyncEnabledState] = useState(() => isSyncEnabled());
-
-  const handleSyncToggle = () => {
-    const newValue = !syncEnabled;
-    setSyncEnabled(newValue);
-    setSyncEnabledState(newValue);
-  };
 
   // Load versions on mount
   useEffect(() => {
-    const loadedVersions = loadVersions();
+    const loadedVersions = listVersions();
     setVersions(loadedVersions);
 
     const active = getActiveVersion();
@@ -337,64 +327,6 @@ export const Stats: React.FC<StatsProps> = ({ items, onSelect, onRestore }) => {
           </div>
         </div>
       )}
-
-      {/* 6. Cloud Sync Settings (only for authenticated users) */}
-      {isAuthenticated() && (
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${syncEnabled ? 'bg-indigo-600/20' : 'bg-slate-700/50'}`}>
-                {syncEnabled ? (
-                  <Cloud className="w-5 h-5 text-indigo-400" />
-                ) : (
-                  <CloudOff className="w-5 h-5 text-slate-500" />
-                )}
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-white">Cloud Sync</h3>
-                <p className="text-xs sm:text-sm text-slate-400">
-                  {syncEnabled
-                    ? 'Your data syncs automatically to remote persistence'
-                    : 'Data is stored locally only'
-                  }
-                </p>
-              </div>
-            </div>
-
-            {/* Toggle Switch */}
-            <button
-              onClick={handleSyncToggle}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${syncEnabled ? 'bg-indigo-600' : 'bg-slate-600'
-                }`}
-              role="switch"
-              aria-checked={syncEnabled}
-              title={syncEnabled ? 'Disable cloud sync' : 'Enable cloud sync'}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${syncEnabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-              />
-            </button>
-          </div>
-
-          {!syncEnabled && (
-            <div className="mt-4 p-3 bg-amber-900/20 border border-amber-700/30 rounded-lg">
-              <p className="text-xs text-amber-300">
-                <strong>Note:</strong> With sync disabled, your data only exists on this device.
-                Enable sync to backup your data and access it from other devices.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 7. Backup & Restore Section */}
-      {onRestore && (
-        <div className="mt-8">
-          <BackupRestore items={items} onRestore={onRestore} />
-        </div>
-      )}
-
     </div>
   );
 };

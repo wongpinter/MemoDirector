@@ -6,7 +6,6 @@
 
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { STORAGE_KEYS } from '../constants';
 
 let currentUser: User | null = null;
 let broadcastAuthChange: ((user: User | null) => void) | null = null;
@@ -14,10 +13,16 @@ let isAuthInitialized = false;
 let authInitPromise: Promise<void> | null = null;
 
 /**
- * Initialize Auth listener and return unsubscribe function
+ * Initialize Auth listener and return unsubscribe function.
+ * No-op when Supabase is not configured (offline mode).
  */
 export function initializeAuth(): () => void {
-  // Set up listener for auth state changes
+  if (!supabase) {
+    isAuthInitialized = true;
+    console.log('🔒 Supabase not configured — running in offline mode.');
+    return () => {};
+  }
+
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user || null;
 
@@ -36,7 +41,7 @@ export function initializeAuth(): () => void {
 
   // Initial check with error handling
   if (!authInitPromise) {
-    authInitPromise = supabase.auth.getSession()
+    authInitPromise = supabase!.auth.getSession()
       .then(({ data: { session } }) => {
         currentUser = session?.user || null;
         if (broadcastAuthChange) {
@@ -95,6 +100,7 @@ export function isAuthenticated(): boolean {
  * Sign up with email and password
  */
 export async function signUp(email: string, password: string, displayName?: string): Promise<{ user: User; session: Session | null }> {
+  if (!supabase) throw new Error('Supabase not configured');
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -121,6 +127,7 @@ export async function signUp(email: string, password: string, displayName?: stri
  * Sign in with email and password
  */
 export async function signIn(email: string, password: string): Promise<User> {
+  if (!supabase) throw new Error('Supabase not configured');
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -144,6 +151,7 @@ export async function signIn(email: string, password: string): Promise<User> {
  * Sign out current user
  */
 export async function signOut(): Promise<void> {
+  if (!supabase) return;
   const { error } = await supabase.auth.signOut();
   if (error) {
     console.error('❌ Sign out failed:', error);
@@ -155,6 +163,7 @@ export async function signOut(): Promise<void> {
  * Send password reset email
  */
 export async function resetPassword(email: string): Promise<void> {
+  if (!supabase) throw new Error('Supabase not configured');
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/reset-password`,
   });
@@ -170,9 +179,12 @@ export async function resetPassword(email: string): Promise<void> {
  * Listen to auth state changes
  */
 export function onAuthChange(callback: (user: User | null) => void): () => void {
+  if (!supabase) {
+    callback(null);
+    return () => { broadcastAuthChange = null; };
+  }
   broadcastAuthChange = callback;
   if (!currentUser) {
-    // If we don't have a user yet, try to get it from session immediately to fire callback
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         currentUser = session?.user || null;
@@ -215,37 +227,4 @@ export function isAnonymousMode(): boolean {
   return getCurrentUserId() === 'anonymous';
 }
 
-/**
- * Get user-scoped storage key for sync preference
- */
-function getSyncStorageKey(): string {
-  const userId = getCurrentUserId();
-  return `${STORAGE_KEYS.SYNC_ENABLED}_${userId}`;
-}
 
-/**
- * Check if cloud sync is enabled for the current user
- * Returns false for anonymous users or if not explicitly enabled
- */
-export function isSyncEnabled(): boolean {
-  // Anonymous users never have sync enabled
-  if (isAnonymousMode()) {
-    return false;
-  }
-
-  const value = localStorage.getItem(getSyncStorageKey());
-  return value === 'true';
-}
-
-/**
- * Enable or disable cloud sync for the current user
- */
-export function setSyncEnabled(enabled: boolean): void {
-  if (isAnonymousMode()) {
-    console.warn('Cannot enable sync for anonymous users');
-    return;
-  }
-
-  localStorage.setItem(getSyncStorageKey(), enabled ? 'true' : 'false');
-  console.log(`✅ Cloud sync ${enabled ? 'enabled' : 'disabled'}`);
-}

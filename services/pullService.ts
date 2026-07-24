@@ -6,8 +6,7 @@
 
 import { PAOItem, PAOVersion } from '../types';
 import { loadPAOListFromFirebase, loadVersions as loadVersionsFromFirebase } from './db';
-import { saveVersions, getActiveVersion, createDefaultVersion } from './versionManager';
-import { saveToLocalStorage } from './syncQueue';
+import { save, getActiveVersion, createVersion, importVersions } from './paoStore';
 import { getCurrentUserId, isAnonymousMode } from './auth';
 
 const namespacedKey = (base: string) => `${base}_${getCurrentUserId()}`;
@@ -101,9 +100,9 @@ export async function pullPAODataFromServer(): Promise<PullResult> {
       console.log('ℹ️ No versions found in Firebase, attempting to pull legacy data');
     }
 
-    // 2. If versions exist, save them and use active version
+    // 2. If versions exist, import them and use active version
     if (versions.length > 0) {
-      saveVersions(versions);
+      importVersions(versions);
       const activeVersion = getActiveVersion();
       if (activeVersion) {
         pulledItems = activeVersion.items;
@@ -120,10 +119,11 @@ export async function pullPAODataFromServer(): Promise<PullResult> {
           // Check if any versions already exist to avoid creating multiple defaults
           const localVersionsJson = localStorage.getItem(versionsKey);
           if (!localVersionsJson || localVersionsJson === '[]') {
-            createDefaultVersion(pulledItems);
+            createVersion('Default', 'Pulled from server');
+            // save pulled items into the new default version
+            save(pulledItems);
             console.log('✅ Created default version from pulled data');
           } else {
-            // If versions exist, create a new version with a unique name
             console.log('ℹ️ Versions already exist, not creating default version');
           }
         }
@@ -140,7 +140,7 @@ export async function pullPAODataFromServer(): Promise<PullResult> {
 
     // 4. Save pulled data to local storage
     if (pulledItems.length > 0) {
-      saveToLocalStorage(pulledItems);
+      save(pulledItems);
       console.log(`✅ Saved ${pulledItems.length} items to local storage`);
     }
 

@@ -3,7 +3,8 @@
  * Factory for creating and managing LLM providers
  */
 
-import { ILLMProvider, getLLMConfig } from "./llmTypes";
+import { ILLMProvider } from './llmTypes';
+import { getConfig } from './llmConfig';
 import { GeminiProvider } from "./geminiService";
 import { OpenAIProvider } from "./openaiProvider";
 import { OpenRouterProvider } from "./openrouterProvider";
@@ -14,7 +15,7 @@ import { Suggestion } from "../types";
  * Get the appropriate LLM provider based on configuration
  */
 export const getLLMProvider = (): ILLMProvider => {
-  const config = getLLMConfig();
+  const config = getConfig();
 
   switch (config.provider) {
     case 'gemini':
@@ -53,7 +54,7 @@ export const getPAOSuggestions = async (
   strictMode: boolean = false,
   excludePersons?: string[]
 ): Promise<Suggestion[]> => {
-  const config = getLLMConfig();
+  const config = getConfig();
   console.log('🤖 LLM Provider:', config.provider, '| Model:', config.model);
   console.log('📝 PAO Request:', { number, theme, specificPerson, strictMode, excludePersons });
   
@@ -71,7 +72,7 @@ export const getSceneDescription = async (
   theme?: string,
   personDescription?: string
 ): Promise<string> => {
-  const config = getLLMConfig();
+  const config = getConfig();
   console.log('🤖 LLM Provider:', config.provider, '| Model:', config.model);
   console.log('🎬 Scene Request:', { person, action, object, theme, personDescription });
   

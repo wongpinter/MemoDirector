@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Grid, Settings, Download, Clapperboard, Loader2, Search, Check, BookOpen, Cloud, CloudOff, RefreshCw, Clock, User as UserIcon, LogIn } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Grid, Search, BookOpen, Settings as SettingsIcon, Clapperboard, Loader2, Check, Cloud, CloudOff, RefreshCw, Clock, User as UserIcon, LogIn } from 'lucide-react';
 import { PAOGrid } from './components/PAOGrid';
-import { Stats } from './components/Stats';
-import { AnkiExport } from './components/AnkiExport';
+import { Settings } from './components/Settings';
 import { ReverseLookup } from './components/ReverseLookup';
+import { Landing } from './components/Landing';
 import { PAOEditor } from './components/PAOEditor';
 import { MajorSystemTrainer } from './components/MajorSystemTrainer';
 import { VersionManager } from './components/VersionManager';
@@ -12,15 +12,14 @@ import { UserProfile } from './components/UserProfile';
 import { PAOItem } from './types';
 import { usePAOData } from './hooks';
 import { ToastProvider } from './contexts';
-import { initializeAuth, onAuthChange, isAuthenticated, getUserDisplayName } from './services/auth';
+import { initializeAuth, onAuthChange, isAuthenticated, getUserDisplayName, isAnonymousMode } from './services/auth';
 import { User } from '@supabase/supabase-js';
 
 enum Tab {
   GRID = 'GRID',
-  STATS = 'STATS',
-  EXPORT = 'EXPORT',
   REVERSE = 'REVERSE',
-  SYSTEM = 'SYSTEM'
+  SYSTEM = 'SYSTEM',
+  SETTINGS = 'SETTINGS',
 }
 
 export default function App() {
@@ -31,6 +30,9 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showLanding, setShowLanding] = useState(() => {
+    try { return localStorage.getItem('md_landing') !== 'true'; } catch { return true; }
+  });
 
   // Initialize auth and listen for changes
   useEffect(() => {
@@ -93,6 +95,29 @@ export default function App() {
     setPrefillPerson(undefined);
   };
 
+  // Example PAO data for onboarding
+  const handleLoadExample = useCallback(() => {
+    const now = Date.now();
+    const examples: PAOItem[] = [
+      { number: 0, person: 'Zeus', action: 'Thundering', object: 'Lightning', scene: 'Zeus hurls a crackling lightning bolt from Mount Olympus, splitting the sky with deafening thunder.', completed: true, lastModified: now },
+      { number: 1, person: 'Superman', action: 'Soaring', object: 'Cape', scene: 'Superman rockets through clouds, red cape rippling behind him as he scans the city below with x-ray vision.', completed: true, lastModified: now },
+      { number: 14, person: 'Thor', action: 'Swinging', object: 'Hammer', scene: 'Thor spins Mjolnir above his head, storm clouds gathering as lightning arcs across the sky.', completed: true, lastModified: now },
+      { number: 34, person: 'Mario', action: 'Jumping', object: 'Mushroom', scene: 'Mario bounces off a giant red mushroom, coins scattering everywhere as he lands with a triumphant "Wahoo!"', completed: true, lastModified: now },
+      { number: 52, person: 'Leonardo', action: 'Painting', object: 'Canvas', scene: 'Leonardo da Vinci carefully applies paint to a massive canvas, the Mona Lisa\'s enigmatic smile emerging under his brush.', completed: true, lastModified: now },
+      { number: 77, person: 'Cookie Monster', action: 'Devouring', object: 'Cookie', scene: 'Cookie Monster demolishes a giant chocolate chip cookie, crumbs exploding everywhere as he shouts "ME WANT MORE!"', completed: true, lastModified: now },
+    ];
+    const merged = items.map(item => {
+      const ex = examples.find(e => e.number === item.number);
+      return ex || item;
+    });
+    updateItems(merged);
+  }, [items, updateItems]);
+
+  const handleEnterApp = () => {
+    localStorage.setItem('md_landing', 'true');
+    setShowLanding(false);
+  };
+
   // Construct initial data for the editor
   const getEditorInitialData = () => {
     if (selectedNumber === null) return undefined;
@@ -112,6 +137,9 @@ export default function App() {
 
   return (
     <ToastProvider>
+      {showLanding ? (
+        <Landing onEnter={handleEnterApp} />
+      ) : (
       <div className="h-screen flex flex-col w-full bg-slate-900 text-slate-50 overflow-hidden">
         {/* Header */}
         <header className="flex-shrink-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-2 md:p-4 shadow-lg w-full overflow-x-auto">
@@ -152,6 +180,11 @@ export default function App() {
               </div>
 
               {/* Auth/Profile Button */}
+              {!isAuthenticated() && (
+                <span className="hidden sm:inline text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
+                  Offline — data stored locally
+                </span>
+              )}
               {isAuthenticated() ? (
                 <button
                   onClick={() => setShowProfileModal(true)}
@@ -174,38 +207,31 @@ export default function App() {
               <div className="flex gap-0.5 bg-slate-800 p-0.5 rounded-lg">
                 <button
                   onClick={() => setActiveTab(Tab.GRID)}
-                  className={`p-1.5 md:p-2 rounded-md transition-all ${activeTab === Tab.GRID ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`flex items-center gap-1 px-2 py-1.5 rounded-md transition-all text-xs font-medium ${activeTab === Tab.GRID ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
                   title="Studio Grid - View and edit your 100 PAO cards"
                 >
-                  <Grid size={18} />
+                  <Grid size={16} /> <span className="hidden sm:inline">Grid</span>
                 </button>
                 <button
                   onClick={() => setActiveTab(Tab.REVERSE)}
-                  className={`p-1.5 md:p-2 rounded-md transition-all ${activeTab === Tab.REVERSE ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`flex items-center gap-1 px-2 py-1.5 rounded-md transition-all text-xs font-medium ${activeTab === Tab.REVERSE ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
                   title="Casting Search - Find celebrities and assign to numbers"
                 >
-                  <Search size={18} />
+                  <Search size={16} /> <span className="hidden sm:inline">Search</span>
                 </button>
                 <button
                   onClick={() => setActiveTab(Tab.SYSTEM)}
-                  className={`p-1.5 md:p-2 rounded-md transition-all ${activeTab === Tab.SYSTEM ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`flex items-center gap-1 px-2 py-1.5 rounded-md transition-all text-xs font-medium ${activeTab === Tab.SYSTEM ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
                   title="Major System - Learn phonetic number encoding"
                 >
-                  <BookOpen size={18} />
+                  <BookOpen size={16} /> <span className="hidden sm:inline">System</span>
                 </button>
                 <button
-                  onClick={() => setActiveTab(Tab.STATS)}
-                  className={`p-1.5 md:p-2 rounded-md transition-all ${activeTab === Tab.STATS ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
-                  title="Settings & Stats - View progress and manage data"
+                  onClick={() => setActiveTab(Tab.SETTINGS)}
+                  className={`flex items-center gap-1 px-2 py-1.5 rounded-md transition-all text-xs font-medium ${activeTab === Tab.SETTINGS ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                  title="Settings — Stats, API Keys, Sync, Export"
                 >
-                  <Settings size={18} />
-                </button>
-                <button
-                  onClick={() => setActiveTab(Tab.EXPORT)}
-                  className={`p-1.5 md:p-2 rounded-md transition-all ${activeTab === Tab.EXPORT ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
-                  title="Export - Download your PAO data for Anki"
-                >
-                  <Download size={18} />
+                  <SettingsIcon size={16} /> <span className="hidden sm:inline">Settings</span>
                 </button>
               </div>
             </div>
@@ -228,6 +254,7 @@ export default function App() {
                   <PAOGrid
                     items={items}
                     onSelect={(num) => setSelectedNumber(num)}
+                    onLoadExample={handleLoadExample}
                   />
                 )}
                 {activeTab === Tab.REVERSE && (
@@ -238,8 +265,7 @@ export default function App() {
                   />
                 )}
                 {activeTab === Tab.SYSTEM && <MajorSystemTrainer />}
-                {activeTab === Tab.STATS && <Stats items={items} onSelect={(num) => setSelectedNumber(num)} onRestore={updateItems} />}
-                {activeTab === Tab.EXPORT && <AnkiExport items={items} />}
+                {activeTab === Tab.SETTINGS && <Settings items={items} onSelect={(num) => setSelectedNumber(num)} onRestore={updateItems} />}
               </>
             )}
           </div>
@@ -270,6 +296,7 @@ export default function App() {
           onSignOut={handleSignOut}
         />
       </div>
+      )}
     </ToastProvider>
   );
 }

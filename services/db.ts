@@ -1,7 +1,8 @@
 
 import { PAOItem, PAOVersion } from '../types';
 import { TOTAL_NUMBERS, STORAGE_KEYS } from '../constants';
-import { getCurrentUserId, isAnonymousMode, isSyncEnabled } from './auth';
+import { getCurrentUserId, isAnonymousMode } from './auth';
+import { isSyncEnabled } from './preferences';
 import { supabase } from './supabase';
 import { safeJsonParse, categorizeSupabaseError, ErrorCategory } from '../utils';
 
@@ -16,7 +17,7 @@ const LOCAL_STORAGE_KEY = STORAGE_KEYS.PAO_DATA;
  * Requires: User authenticated AND sync enabled by user
  */
 export const isRemoteReadyForSync = (): boolean => {
-  return Boolean(!isAnonymousMode() && isSyncEnabled());
+  return Boolean(supabase && !isAnonymousMode() && isSyncEnabled());
 };
 
 // Generate blank 00-99 list
@@ -128,8 +129,8 @@ export const uploadMedia = async (
   base64Data: string,
   mimeType: string
 ): Promise<string | null> => {
-  if (isAnonymousMode()) {
-    console.warn("Anonymous mode. Cannot upload media.");
+  if (isAnonymousMode() || !supabase) {
+    console.warn('Supabase not configured. Cannot upload media.');
     return null;
   }
 

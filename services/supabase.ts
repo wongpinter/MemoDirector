@@ -1,16 +1,20 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Load environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('⚠️ Supabase URL or Anon Key is missing. Check your .env file.');
-}
+// pony tail: Supabase optional — only create client when both URL and key are provided.
+// Callers must null-check supabase before use.
+let _client: SupabaseClient | null = null;
 
-// Create a single supabase client for interacting with your database
-export const supabase = createClient(
-    supabaseUrl || '',
-    supabaseAnonKey || ''
-);
+export const supabase: SupabaseClient | null = (() => {
+  if (supabaseUrl && supabaseAnonKey &&
+      !supabaseUrl.includes('your_supabase') &&
+      !supabaseAnonKey.includes('your_supabase')) {
+    _client = createClient(supabaseUrl, supabaseAnonKey);
+    return _client;
+  }
+  console.warn('⚠️ Supabase not configured — running in offline mode.');
+  return null;
+})();
