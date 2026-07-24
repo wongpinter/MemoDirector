@@ -1,116 +1,88 @@
-# MemoDirector 🎬
+# MemoDirector
 
-MemoDirector is a "Movie Studio for your Mind." It is a specialized application designed to help memory athletes and learners build, manage, and visualize a **PAO (Person-Action-Object)** memory system using the Major System.
+MemoDirector is a static, local-first single-page application designed for building, managing, and drilling a Person-Action-Object (PAO) memory system using the Major System phonetic encoding rules. It ingests user PAO card inputs and AI casting prompts, and emits structured Anki flashcard decks (.apkg) for spaced repetition practice.
 
-It leverages **Google Gemini AI** to automatically suggest characters, actions, and objects based on phonetic rules, and uses **remote persistence** for cloud synchronization (with a LocalStorage fallback).
+The application operates entirely client-side, using browser LocalStorage for immediate persistence and metadata versioning. It supports optional, asynchronous multi-device synchronization and media uploads via a Supabase backend integration, falling back gracefully to offline mode when unconfigured.
 
-## 🚀 Features
+## Table of Contents
 
-*   **Major System Grid:** Visual 00-99 grid management.
-*   **AI Casting Director:** Uses Google Gemini to suggest PAO sets that fit strict phonetic rules.
-*   **Director's Cut:** AI generation of vivid, multi-sensory scenes to aid memory retention.
-*   **Talent Scout (Reverse Lookup):** Type a character name (e.g., "Tony Stark") to see if they fit better as #10 (Initials T-S) or #12 (Phonetic T-N).
-*   **Anki Export:** Export your deck to `.apkg` format for spaced repetition practice.
-*   **Backup & Restore:** Export your PAO data to CSV format and restore from backups with smart merge strategies.
-*   **LocalStorage-First Sync:** ⚡ Instant saves to your device with automatic cloud backup every 30 seconds.
-*   **Offline Support:** Works completely offline - sync happens automatically when you're back online.
-*   **Manual Sync Control:** Force immediate cloud backup with the sync button in the header.
+- [Requirements](#requirements)
+- [Quick Start](#quick-start)
+- [Environment Configuration](#environment-configuration)
+- [Development](#development)
+- [License](#license)
 
-## 🛠️ Installation & Setup
+## Requirements
 
-### Prerequisites
+The application requires the following runtime environment:
 
-*   Node.js (v16 or higher)
-*   npm or yarn
+- Node.js v18.0.0 or higher
+- npm v9.0.0 or higher (or equivalent yarn/pnpm package manager)
 
-### 1. Clone and Install
+## Quick Start
+
+To run the application locally, initialize the environment configuration and start the Vite development server.
+
+1. Install local dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Copy the environment template to create a local config file:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Start the local development server:
+   ```bash
+   npm run dev
+   ```
+
+The application will build the development assets and start listening at:
+```text
+http://localhost:3000
+```
+
+## Environment Configuration
+
+The application uses environment variables for optional cloud synchronization and developer-only fallback API keys. All keys configured here are loaded at runtime by the client; users can override these fallback keys directly within the application's Settings interface (stored encrypted in the browser's LocalStorage).
+
+### Optional Integrations and Feature Toggles
+
+| Variable | Default | Description |
+|:---|---:|:---|
+| `VITE_SUPABASE_URL` | | URL endpoint for your Supabase database instance. |
+| `VITE_SUPABASE_ANON_KEY` | | Anonymous public API key for the Supabase instance. |
+| `VITE_GEMINI_API_KEY` | | Developer fallback Google Gemini API key. |
+| `VITE_GEMINI_MODEL` | `gemini-2.0-flash-exp` | Fallback Gemini model variant. |
+| `VITE_OPENAI_API_KEY` | | Developer fallback OpenAI API key. |
+| `VITE_OPENAI_MODEL` | `gpt-4o-mini` | Fallback OpenAI model variant. |
+| `VITE_OPENROUTER_API_KEY` | | Developer fallback OpenRouter API key. |
+| `VITE_OPENROUTER_MODEL` | `anthropic/claude-3.5-sonnet` | Fallback OpenRouter model variant. |
+| `VITE_OLLAMA_BASE_URL` | `http://localhost:11434` | Endpoint URL for a local Ollama model instance. |
+| `VITE_OLLAMA_MODEL` | `llama3.2` | Fallback local Ollama model variant. |
+
+Do not commit `.env` configuration files to version control. In production deployment platforms, inject these keys directly into the build environment secrets manager.
+
+## Development
+
+The project uses Vite and standard npm scripts to manage the development lifecycle.
+
+Use the following commands during local development:
 
 ```bash
-git clone https://github.com/your-username/memodirector.git
-cd memodirector
-npm install
-```
-
-### 2. Environment Configuration
-
-The application relies on environment variables for the AI features and Database connectivity.
-
-Copy the `.env.example` file to create your own `.env` file:
-
-```bash
-cp .env.example .env
-```
-
-#### A. Google Gemini API (Required for AI Suggestions)
-
-1.  Go to [Google AI Studio](https://aistudio.google.com/apikey).
-2.  Create a new API Key.
-3.  Add it to your `.env` file:
-
-```env
-VITE_GEMINI_API_KEY=your_google_ai_studio_key_here
-```
-
-#### B. Cloud Sync (Optional - For Cloud Backup)
-
-If you skip this, the app will default to **LocalStorage**, which works perfectly for a single device.
-
-1.  Create a project at [Supabase](https://supabase.com).
-2.  Obtain the **Project URL** and **Anon Key**.
-3.  Copy the configuration values into your `.env` file:
-
-```env
-VITE_SUPABASE_URL=your_project_url
-VITE_SUPABASE_ANON_KEY=your_anon_key
-```
-
-> **Note:** All environment variables now use the `VITE_` prefix as per Vite conventions. The application code ( `services/db.ts` ) automatically detects if these keys are present. If not, it falls back to LocalStorage without errors.
-
-### 3. Running the App
-
-Start the development server:
-
-```bash
-npm start
-# or
+# Start the local HMR dev server
 npm run dev
+
+# Compile and minify assets for production
+npm run build
+
+# Preview the local production build
+npm run preview
 ```
 
-## 📂 Project Structure
+Static compiled assets are outputted to the `dist/` directory on build.
 
-*   `src/components`: UI Components (Grid, Editor, Stats, etc.).
-*   `src/services`: External integrations.
-    -   `geminiService.ts`: Handles prompts and communication with Google GenAI SDK.
-    -   `db.ts`: Handles data persistence (Remote Persistence / LocalStorage logic).
-*   `src/constants.ts`: Major System phonetic rules and calculation logic.
-*   `src/types.ts`: TypeScript interfaces.
+## License
 
-## 🧠 How the AI Logic Works
-
-The app uses specific prompts in `geminiService.ts` to enforce Major System rules:
-
-1.  **Strict Mode:** Forces the AI to find a Person, Action, *and* Object that all phonetically match the target number (e.g., for #15 (T-L), it might suggest "Ted Lasso", "Toiling", "Tool").
-2.  **Standard Mode:** Finds a Person fitting the phonetic rule, but allows the Action and Object to be thematically iconic to that person (e.g., "Thor" (14) -> "Throwing" -> "Hammer").
-
-## 🌐 Live Demo
-
-**Live URL:** https://memodirector.web.app
-
-The app is automatically deployed to cloud hosting when changes are pushed to the `main` branch.
-
-## 📚 Documentation
-
-For detailed documentation, development guides, and project status reports, see the [docs](docs/) directory:
-
-* [Quick Start Guide](docs/QUICK_START.md)
-* [Backup & Restore Guide](docs/BACKUP_RESTORE.md) - **NEW!** Export and restore your PAO data
-* [Sync Strategy](docs/SYNC_STRATEGY.md) - Learn about LocalStorage-first sync
-* [Sync Migration Guide](docs/SYNC_MIGRATION.md) - What changed and how to use it
-* [Deployment Guide](docs/DEPLOYMENT.md)
-* [Refactoring Guide](docs/REFACTORING_GUIDE.md)
-* [Testing Report](docs/TESTING_REPORT.md)
-* [And more...](docs/README.md)
-
-## 📜 License
-
-MIT
+This project is licensed under the MIT License.
