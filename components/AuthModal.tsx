@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, LogIn, UserPlus, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, LogIn, UserPlus, KeyRound } from 'lucide-react';
 import { signIn, signUp, resetPassword } from '../services/auth';
+import { Modal, FormField, Input, Button, Notice } from './ui';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -34,34 +35,26 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         onClose();
       } else if (mode === 'signup') {
         const { session } = await signUp(email, password, displayName);
-
         if (!session) {
-          // If no session, it means email confirmation is required
-          setSuccess('Account created! Please check your email to confirm.');
-          // Don't close modal immediately so they see the message
+          setSuccess('Account created. Check your inbox to confirm your email.');
           setTimeout(() => {
             setMode('signin');
-            // Optionally clear success message if we want clean state, or keep it
-            // keeping it usually good
           }, 3000);
         } else {
-          // Session exists, auto-login successful
           onSuccess();
           onClose();
         }
       } else if (mode === 'reset') {
         await resetPassword(email);
-        setSuccess('Password reset email sent! Check your inbox.');
+        setSuccess('Password reset link sent to your email.');
         setTimeout(() => setMode('signin'), 3000);
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
-
-
 
   const resetForm = () => {
     setEmail('');
@@ -76,171 +69,146 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     setMode(newMode);
   };
 
+  const titles: Record<AuthMode, { title: string; subtitle: string; icon: React.ReactNode }> = {
+    signin: {
+      title: 'Sign In',
+      subtitle: 'Access your synced PAO deck and custom themes across devices',
+      icon: <LogIn className="w-5 h-5 text-accent" />,
+    },
+    signup: {
+      title: 'Create Account',
+      subtitle: 'Enable automatic cloud synchronization and backups',
+      icon: <UserPlus className="w-5 h-5 text-accent" />,
+    },
+    reset: {
+      title: 'Reset Password',
+      subtitle: 'Enter your account email to receive a recovery link',
+      icon: <KeyRound className="w-5 h-5 text-accent" />,
+    },
+  };
+
+  const activeHeader = titles[mode];
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" style={{ zIndex: 9999 }}>
-      <div className="bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-md overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            {mode === 'signin' && <><LogIn size={24} className="text-indigo-400" /> Sign In</>}
-            {mode === 'signup' && <><UserPlus size={24} className="text-indigo-400" /> Sign Up</>}
-            {mode === 'reset' && <><Mail size={24} className="text-indigo-400" /> Reset Password</>}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            <X size={20} className="text-slate-400" />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        <div className="flex items-center gap-2">
+          {activeHeader.icon}
+          <span className="font-display font-bold text-xl text-charcoal">
+            {activeHeader.title}
+          </span>
         </div>
+      }
+      subtitle={activeHeader.subtitle}
+      maxWidth="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <Notice variant="danger">{error}</Notice>}
+        {success && <Notice variant="success">{success}</Notice>}
 
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-950/30 border border-red-600/50 rounded-lg p-3 flex items-start gap-2">
-              <AlertCircle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-300">{error}</p>
-            </div>
-          )}
+        {mode === 'signup' && (
+          <FormField label="Display Name">
+            <Input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="e.g., Alex"
+              leftIcon={<User className="w-4 h-4 text-steel" />}
+            />
+          </FormField>
+        )}
 
-          {/* Success Message */}
-          {success && (
-            <div className="bg-emerald-950/30 border border-emerald-600/50 rounded-lg p-3 flex items-start gap-2">
-              <AlertCircle size={18} className="text-emerald-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-emerald-300">{success}</p>
-            </div>
-          )}
+        <FormField label="Email" required>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@domain.com"
+            required
+            leftIcon={<Mail className="w-4 h-4 text-steel" />}
+          />
+        </FormField>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Display Name
-                </label>
-                <div className="relative">
-                  <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Your name"
-                  />
-                </div>
-              </div>
-            )}
+        {mode !== 'reset' && (
+          <FormField label="Password" required>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              leftIcon={<Lock className="w-4 h-4 text-steel" />}
+            />
+          </FormField>
+        )}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="your@email.com"
-                />
-              </div>
-            </div>
+        <Button
+          variant="accent"
+          size="md"
+          type="submit"
+          loading={loading}
+          className="w-full mt-2"
+        >
+          {mode === 'signin' && 'Sign In'}
+          {mode === 'signup' && 'Create Account'}
+          {mode === 'reset' && 'Send Reset Link'}
+        </Button>
 
-            {mode !== 'reset' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="••••••••"
-                  />
-                </div>
-                {mode === 'signup' && (
-                  <p className="text-xs text-slate-500 mt-1">At least 6 characters</p>
-                )}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  {mode === 'signin' && 'Sign In'}
-                  {mode === 'signup' && 'Create Account'}
-                  {mode === 'reset' && 'Send Reset Email'}
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Google Sign In */}
-
-
-          {/* Mode Switcher */}
-          <div className="text-center text-sm">
-            {mode === 'signin' && (
-              <>
-                <p className="text-slate-400">
-                  Don't have an account?{' '}
-                  <button
-                    onClick={() => switchMode('signup')}
-                    className="text-indigo-400 hover:text-indigo-300 font-semibold"
-                  >
-                    Sign up
-                  </button>
-                </p>
+        {/* Mode Switchers */}
+        <div className="pt-3 border-t border-border text-center space-y-2 text-xs text-steel">
+          {mode === 'signin' && (
+            <>
+              <p>
+                Don&apos;t have an account?{' '}
                 <button
+                  type="button"
+                  onClick={() => switchMode('signup')}
+                  className="font-semibold text-accent hover:underline"
+                >
+                  Sign up
+                </button>
+              </p>
+              <p>
+                <button
+                  type="button"
                   onClick={() => switchMode('reset')}
-                  className="text-slate-500 hover:text-slate-400 text-xs mt-2"
+                  className="text-steel hover:text-charcoal hover:underline"
                 >
-                  Forgot password?
-                </button>
-              </>
-            )}
-            {mode === 'signup' && (
-              <p className="text-slate-400">
-                Already have an account?{' '}
-                <button
-                  onClick={() => switchMode('signin')}
-                  className="text-indigo-400 hover:text-indigo-300 font-semibold"
-                >
-                  Sign in
+                  Forgot your password?
                 </button>
               </p>
-            )}
-            {mode === 'reset' && (
-              <p className="text-slate-400">
-                Remember your password?{' '}
-                <button
-                  onClick={() => switchMode('signin')}
-                  className="text-indigo-400 hover:text-indigo-300 font-semibold"
-                >
-                  Sign in
-                </button>
-              </p>
-            )}
-          </div>
+            </>
+          )}
+
+          {mode === 'signup' && (
+            <p>
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className="font-semibold text-accent hover:underline"
+              >
+                Sign in
+              </button>
+            </p>
+          )}
+
+          {mode === 'reset' && (
+            <p>
+              Remember your credentials?{' '}
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className="font-semibold text-accent hover:underline"
+              >
+                Back to Sign in
+              </button>
+            </p>
+          )}
         </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }

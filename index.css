@@ -1,37 +1,53 @@
+:root {
+  --color-canvas: #dcdcdd;
+  --color-charcoal: #2f3235;
+  --color-steel: #4c5c68;
+  --color-border: #c5c3c6;
+  --color-border-hover: #a7a5a8;
+  --color-accent: #116c82;
+  --color-surface: #ffffff;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 html, body {
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: var(--color-canvas);
+  color: var(--color-charcoal);
+  font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
+  min-height: 100vh;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: var(--color-canvas);
 }
 ::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
+  background: var(--color-border);
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: var(--color-border-hover);
 }
 
-/* Toast Animation */
+/* Toast Animation with prefers-reduced-motion fallback */
 @keyframes slide-in {
   from {
     transform: translateX(100%);
@@ -42,6 +58,30 @@ html, body {
     opacity: 1;
   }
 }
+
 .animate-slide-in {
-  animation: slide-in 0.3s ease-out;
+  animation: slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in {
+    animation: none;
+    opacity: 1;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+button:disabled, input:disabled, select:disabled, textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

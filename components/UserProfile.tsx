@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, Mail, Calendar, Shield, X } from 'lucide-react';
-import { getCurrentUser, signOut, getUserDisplayName, getUserEmail, isAnonymousMode } from '../services/auth';
+import { User, LogOut, Mail, Calendar, Shield } from 'lucide-react';
+import {
+  getCurrentUser,
+  signOut,
+  getUserDisplayName,
+  getUserEmail,
+  isAnonymousMode,
+} from '../services/auth';
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import { Modal, Button, Card, Notice } from './ui';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -42,84 +49,75 @@ export function UserProfile({ isOpen, onClose, onSignOut }: UserProfileProps) {
   const anonymousMode = isAnonymousMode();
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" style={{ zIndex: 9999 }}>
-      <div className="bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <User size={22} className="text-indigo-400" />
-            Profile
-          </h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-lg transition-colors">
-            <X size={20} className="text-slate-400" />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        <div className="flex items-center gap-2">
+          <User className="w-5 h-5 text-accent" />
+          <span className="font-display font-bold text-xl text-charcoal">Account Profile</span>
         </div>
-
-        <div className="p-6 space-y-6">
-          {anonymousMode ? (
-            <div className="bg-amber-950/20 border border-amber-600/30 rounded-lg p-6">
-              <div className="flex items-start gap-3">
-                <Shield size={24} className="text-amber-400 flex-shrink-0 mt-1" />
+      }
+      subtitle="View profile status and authentication details"
+      maxWidth="md"
+    >
+      <div className="space-y-4">
+        {anonymousMode ? (
+          <Notice variant="info" title="Offline Mode Active">
+            <p className="mt-1">
+              You are using MemoDirector locally on this browser. Sign in or create an account to
+              sync your deck across devices.
+            </p>
+          </Notice>
+        ) : (
+          <>
+            <Card variant="subtle" padding="md" className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-accent text-surface flex items-center justify-center font-display font-bold text-xl">
+                  {getUserDisplayName().charAt(0).toUpperCase()}
+                </div>
                 <div>
-                  <h3 className="text-lg font-bold text-amber-300 mb-2">Offline Mode</h3>
-                  <p className="text-amber-200/80 text-sm mb-4">
-                    You're using the app without an account. Data is stored locally on this device.
-                  </p>
-                  <ul className="space-y-2 text-sm text-amber-200/70">
-                    <li>• No cross-device sync</li>
-                    <li>• No cloud backup</li>
-                    <li>• Sign in to enable sync</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-2xl font-bold text-white">
-                    {getUserDisplayName().charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">{getUserDisplayName()}</h3>
-                    <p className="text-slate-400 text-sm">{getUserEmail()}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm">
-                    <Mail size={16} className="text-slate-500" />
-                    <span className="text-slate-400">Email:</span>
-                    <span className="text-white">{user?.email || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <Calendar size={16} className="text-slate-500" />
-                    <span className="text-slate-400">Member since:</span>
-                    <span className="text-white">{formatDate(user?.created_at || null)}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <Shield size={16} className="text-slate-500" />
-                    <span className="text-slate-400">ID:</span>
-                    <span className="text-white font-mono text-xs">{user?.id || 'N/A'}</span>
-                  </div>
+                  <h3 className="font-semibold text-charcoal text-base">{getUserDisplayName()}</h3>
+                  <p className="text-steel text-xs">{getUserEmail()}</p>
                 </div>
               </div>
 
-              {/* API Keys and data tools moved to Settings tab */}
-              <div className="text-xs text-slate-500 text-center">
-                API Keys, sync, backup, and export are in <strong>Settings</strong>
+              <div className="space-y-2 pt-2 border-t border-border text-xs">
+                <div className="flex items-center justify-between text-steel">
+                  <span className="flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5" /> Email
+                  </span>
+                  <span className="font-medium text-charcoal">{user?.email || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between text-steel">
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" /> Member Since
+                  </span>
+                  <span className="font-medium text-charcoal">
+                    {formatDate(user?.created_at || null)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-steel">
+                  <span className="flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5" /> Account ID
+                  </span>
+                  <span className="font-mono text-charcoal truncate max-w-xs">{user?.id || 'N/A'}</span>
+                </div>
               </div>
+            </Card>
 
-              <button
-                onClick={handleSignOut}
-                className="w-full py-3 bg-red-900/30 hover:bg-red-900/50 text-red-300 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <LogOut size={18} />
-                Sign Out
-              </button>
-            </>
-          )}
-        </div>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={handleSignOut}
+              icon={<LogOut className="w-4 h-4" />}
+              className="w-full"
+            >
+              Sign Out
+            </Button>
+          </>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -1,5 +1,15 @@
 import React from 'react';
-import { Clapperboard, Brain, Search, BookOpen, Download, Wifi, Wand2, LayoutGrid } from 'lucide-react';
+import {
+  Clapperboard,
+  Brain,
+  Search,
+  Download,
+  Wifi,
+  Wand2,
+  LayoutGrid,
+  ArrowRight,
+} from 'lucide-react';
+import { Card, Button, Badge } from './ui';
 
 interface LandingProps {
   onEnter: () => void;
@@ -7,138 +17,158 @@ interface LandingProps {
 
 const features = [
   {
-    icon: <LayoutGrid size={20} className="text-indigo-400" />,
-    title: 'PAO Grid (00–99)',
-    desc: 'Build your Person-Action-Object memory system across all 100 Major System numbers. Each slot maps a character, their iconic action, and a signature object.',
+    icon: <LayoutGrid className="w-5 h-5 text-accent" />,
+    title: 'PAO Matrix (00–99)',
+    desc: 'Build your Person-Action-Object memory system across all 100 Major System numbers. Each slot anchors a character, an iconic action, and a signature object.',
   },
   {
-    icon: <Wand2 size={20} className="text-purple-400" />,
+    icon: <Wand2 className="w-5 h-5 text-accent" />,
     title: 'AI Casting Director',
-    desc: 'Let AI suggest PAO sets that follow strict Major System phonetic rules. Supports Gemini, OpenAI, OpenRouter, and local Ollama models.',
+    desc: 'Generate suggestions obeying strict Major System phonetic rules. Connects to Gemini, OpenAI, OpenRouter, and local Ollama models.',
   },
   {
-    icon: <Search size={20} className="text-amber-400" />,
+    icon: <Search className="w-5 h-5 text-accent" />,
     title: 'Talent Scout',
-    desc: 'Type any name — "Tony Stark", "Sun Wukong" — and instantly see which Major System numbers they fit. Dual-mode: Initials + Phonetic.',
+    desc: 'Type any name — "Tony Stark", "Sun Wukong" — and immediately discover which Major System slots fit via initials or phonetic streams.',
   },
   {
-    icon: <Brain size={20} className="text-emerald-400" />,
+    icon: <Brain className="w-5 h-5 text-accent" />,
     title: "Director's Cut",
-    desc: 'AI generates vivid, multi-sensory memory scenes for each PAO set. Visual, auditory, and emotional anchors for stronger recall.',
+    desc: 'Craft vivid, multi-sensory memory scenes linking character, action, and object for bulletproof retrieval during competition or study.',
   },
   {
-    icon: <Download size={20} className="text-cyan-400" />,
+    icon: <Download className="w-5 h-5 text-accent" />,
     title: 'Anki Export',
-    desc: 'Export your deck to Anki format for spaced repetition practice. Complete cards with phonetics, or minimalist quick-review versions.',
+    desc: 'Export structured flashcard decks directly into Anki. Supports complete cards with phonetic hints or minimalist rapid-drill versions.',
   },
   {
-    icon: <Wifi size={20} className="text-rose-400" />,
-    title: 'Offline-First',
-    desc: 'All data stored locally on your device. Works completely offline. Optional cloud sync for multi-device access via Supabase.',
+    icon: <Wifi className="w-5 h-5 text-accent" />,
+    title: 'Local-First Architecture',
+    desc: 'Runs completely in your browser without mandatory accounts. LocalStorage persistence with optional Supabase cloud sync across devices.',
   },
 ];
 
 const steps = [
-  { num: '1', title: 'Learn the Major System', desc: 'Each digit 0–9 maps to consonant sounds. "S" = 0, "T" = 1, "N" = 2, and so on. Our built-in trainer teaches you the rules.' },
-  { num: '2', title: 'Build your PAO deck', desc: 'Assign a Person, Action, and Object to each number 00–99. Use AI suggestions or the Talent Scout to find characters that match phonetically.' },
-  { num: '3', title: 'Create memory scenes', desc: 'Generate vivid Director\'s Cut scenes that link the person, action, and object together. Export to Anki for daily spaced-repetition practice.' },
+  {
+    num: '1',
+    title: 'Learn the Phonetic Code',
+    desc: 'Each digit 0–9 represents fixed consonant sounds. 0 is S/Z, 1 is T/D, 2 is N. Our interactive trainer cements the rules.',
+  },
+  {
+    num: '2',
+    title: 'Cast Your 100 Characters',
+    desc: 'Assign characters, actions, and objects to 00–99. Use the Talent Scout to match real and fictional personalities.',
+  },
+  {
+    num: '3',
+    title: 'Drill with Spaced Repetition',
+    desc: 'Generate Director’s Cut scenes and export your deck to Anki for automated, daily retrieval drills.',
+  },
 ];
 
 export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-50 overflow-y-auto">
+    <div className="min-h-screen bg-canvas text-charcoal font-sans overflow-y-auto">
       {/* Hero */}
-      <header className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 via-slate-900 to-cyan-900/20" />
-        <div className="relative max-w-4xl mx-auto px-6 py-20 sm:py-32 text-center">
-          <div className="inline-flex items-center gap-2 bg-indigo-600/20 border border-indigo-500/30 rounded-full px-4 py-1.5 text-sm text-indigo-300 mb-6">
-            <Clapperboard size={16} />
-            Movie Studio for your Mind
-          </div>
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-4">
-            <span className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
-              MemoDirector
-            </span>
+      <header className="relative py-16 sm:py-24 px-6 text-center border-b border-border bg-surface">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Badge variant="accent" size="md" className="gap-1.5 inline-flex">
+            <Clapperboard className="w-3.5 h-3.5" /> Physical Index Card System for Memory Athletes
+          </Badge>
+
+          <h1 className="text-4xl sm:text-6xl font-display font-extrabold tracking-tight text-charcoal">
+            Direct Your Memory Palace
           </h1>
-          <p className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-8">
-            A specialized tool for memory athletes to build, visualize, and drill{' '}
-            <strong className="text-slate-200">PAO (Person-Action-Object)</strong> memory systems
-            using the <strong className="text-slate-200">Major System</strong> phonetic encoding.
+
+          <p className="text-base sm:text-lg text-steel max-w-2xl mx-auto leading-relaxed">
+            MemoDirector is a local-first workstation to build, organize, and drill a{' '}
+            <span className="font-semibold text-charcoal">Person-Action-Object (PAO)</span> memory
+            deck using the <span className="font-semibold text-charcoal">Major System</span> phonetic
+            code.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <Button
+              variant="accent"
+              size="lg"
               onClick={onEnter}
-              className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 text-lg"
+              icon={<ArrowRight className="w-4 h-4" />}
             >
-              Launch App
-            </button>
-            <a
-              href="#features"
-              className="px-8 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition-all border border-slate-700 text-lg"
+              Open PAO Studio
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+              }}
             >
-              Learn More
-            </a>
+              Explore Features
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Features */}
-      <section id="features" className="max-w-6xl mx-auto px-6 py-20">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-12">
-          Everything you need to master the Major System
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Features Grid */}
+      <section id="features" className="max-w-6xl mx-auto px-6 py-16 sm:py-20 space-y-10">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl sm:text-3xl font-display font-bold text-charcoal">
+            Engineered for Precision Memorization
+          </h2>
+          <p className="text-steel text-sm max-w-lg mx-auto">
+            Everything needed to eliminate ambiguity and construct a 100-card mnemonic matrix.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((f, i) => (
-            <div
+            <Card
               key={i}
-              className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 hover:border-slate-600 transition-all"
+              variant="paper"
+              padding="lg"
+              className="hover:border-accent hover:shadow-md transition-all space-y-3"
             >
-              <div className="p-2 bg-slate-900 rounded-lg inline-block mb-4">
+              <div className="p-2.5 rounded-lg bg-accent-light text-accent inline-block">
                 {f.icon}
               </div>
-              <h3 className="font-bold text-white mb-2">{f.title}</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
-            </div>
+              <h3 className="font-display font-bold text-charcoal text-base">{f.title}</h3>
+              <p className="text-xs sm:text-sm text-steel leading-relaxed">{f.desc}</p>
+            </Card>
           ))}
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="max-w-4xl mx-auto px-6 py-20 border-t border-slate-800">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-12">
-          How it works
-        </h2>
-        <div className="space-y-8">
-          {steps.map((s, i) => (
-            <div key={i} className="flex gap-5 items-start">
-              <div className="flex-shrink-0 w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-xl font-black text-white shadow-lg shadow-indigo-500/20">
-                {s.num}
-              </div>
-              <div>
-                <h3 className="font-bold text-white text-lg mb-1">{s.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{s.desc}</p>
-              </div>
-            </div>
-          ))}
+      {/* How it Works */}
+      <section className="border-t border-border bg-surface-subtle/40 py-16 px-6">
+        <div className="max-w-4xl mx-auto space-y-10">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-display font-bold text-charcoal">
+              The 3-Step Mnemonic Pipeline
+            </h2>
+            <p className="text-steel text-sm">
+              From phonetic basics to sub-conscious card recall.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {steps.map((s, i) => (
+              <Card key={i} variant="paper" padding="md" className="space-y-2.5 text-left">
+                <span className="font-display font-bold text-2xl text-accent block">
+                  0{s.num}
+                </span>
+                <h4 className="font-semibold text-charcoal text-base">{s.title}</h4>
+                <p className="text-xs text-steel leading-relaxed">{s.desc}</p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-center pt-4">
+            <Button variant="accent" size="lg" onClick={onEnter}>
+              Launch MemoDirector Now
+            </Button>
+          </div>
         </div>
       </section>
-
-      {/* CTA */}
-      <section className="max-w-2xl mx-auto px-6 py-16 text-center border-t border-slate-800">
-        <h2 className="text-2xl font-bold text-white mb-4">Ready to build your memory palace?</h2>
-        <p className="text-slate-400 mb-8">Start with example data or build from scratch. No sign-up required.</p>
-        <button
-          onClick={onEnter}
-          className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 text-lg"
-        >
-          Launch App — It's Free
-        </button>
-      </section>
-
-      {/* Footer */}
-      <footer className="text-center py-8 border-t border-slate-800 text-xs text-slate-600">
-        MemoDirector — Data stored locally on your device. No account required.
-      </footer>
     </div>
   );
 };

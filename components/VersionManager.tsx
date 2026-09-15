@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { BookOpen, ChevronDown, Plus, Edit2, Copy, Trash2, Check } from 'lucide-react';
 import { PAOVersion } from '../types';
 import {
   listVersions,
@@ -8,8 +9,8 @@ import {
   deleteVersion,
   switchVersion,
   duplicateVersion,
-  getActiveVersion
 } from '../services/paoStore';
+import { Button, Input, Badge, Modal, FormField } from './ui';
 
 interface VersionManagerProps {
   onVersionSwitch: () => void;
@@ -36,7 +37,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
     loadData();
   }, []);
 
-  const activeVersion = versions.find(v => v.isActive);
+  const activeVersion = versions.find((v) => v.isActive);
 
   const handleCreateVersion = () => {
     if (!newVersionName.trim()) return;
@@ -47,6 +48,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
     setCopyFromActive(false);
     setShowCreateModal(false);
     loadData();
+    onVersionSwitch();
   };
 
   const handleSwitchVersion = (versionId: string) => {
@@ -69,14 +71,12 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
   };
 
   const handleDuplicateVersion = (versionId: string) => {
-    const version = versions.find(v => v.id === versionId);
+    const version = versions.find((v) => v.id === versionId);
     if (!version) return;
 
-    const newName = prompt('Enter name for duplicated version:', `${version.name} (Copy)`);
-    if (newName) {
-      duplicateVersion(versionId, newName);
-      loadData();
-    }
+    const newName = `${version.name} (Copy)`;
+    duplicateVersion(versionId, newName);
+    loadData();
   };
 
   const handleStartEdit = (version: PAOVersion) => {
@@ -91,6 +91,7 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
     renameVersion(editingVersion, editName.trim(), editDesc.trim() || undefined);
     setEditingVersion(null);
     loadData();
+    onVersionSwitch();
   };
 
   const formatDate = (timestamp: number) => {
@@ -98,15 +99,14 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
     });
   };
 
   const handleToggle = () => {
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPos({ top: rect.bottom + 8, left: rect.left });
+      const clampedLeft = Math.min(rect.left, Math.max(8, window.innerWidth - 328));
+      setDropdownPos({ top: rect.bottom + 6, left: clampedLeft });
     }
     setIsOpen(!isOpen);
   };
@@ -115,177 +115,195 @@ export function VersionManager({ onVersionSwitch }: VersionManagerProps) {
     <div className="relative">
       <button
         ref={buttonRef}
-        className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-slate-800 border-2 border-slate-700 rounded-lg cursor-pointer text-sm font-medium text-slate-200 transition-all hover:border-indigo-500 hover:bg-slate-750"
+        type="button"
         onClick={handleToggle}
+        className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-surface text-charcoal text-xs font-medium hover:border-steel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
-        <span className="text-base md:text-lg">📚</span>
-        <span className="hidden sm:inline text-sm text-slate-300">{activeVersion?.name || 'Default'}</span>
-        <span className="text-xs text-slate-500">{isOpen ? '▲' : '▼'}</span>
+        <BookOpen className="w-3.5 h-3.5 text-accent" />
+        <span className="hidden sm:inline font-semibold text-charcoal">
+          {activeVersion?.name || 'Default'}
+        </span>
+        <ChevronDown className="w-3 h-3 text-steel" />
       </button>
 
-      {isOpen && createPortal(
-        <div
-          className="fixed inset-0 z-[9998]"
-          onClick={() => setIsOpen(false)}
-        >
-          <div
-            className="absolute bg-slate-800 border-2 border-slate-700 rounded-xl shadow-2xl max-h-96 overflow-y-auto min-w-[280px]"
-            style={{ top: dropdownPos.top, left: dropdownPos.left }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-2">
-              {versions.map(version => (
-                <div
-                  key={version.id}
-                  className={`p-3 rounded-lg mb-2 border transition-all ${version.isActive
-                      ? 'bg-indigo-900/30 border-indigo-600'
-                      : 'bg-slate-900 border-slate-700 hover:bg-slate-750 hover:border-slate-600'
-                    }`}
-                >
-                  {editingVersion === version.id ? (
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Version name"
-                        className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-indigo-500"
-                      />
-                      <input
-                        type="text"
-                        value={editDesc}
-                        onChange={(e) => setEditDesc(e.target.value)}
-                        placeholder="Description (optional)"
-                        className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-indigo-500"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleSaveEdit}
-                          className="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingVersion(null)}
-                          className="flex-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-semibold rounded-lg transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div
-                        className={version.isActive ? 'cursor-default' : 'cursor-pointer'}
-                        onClick={() => !version.isActive && handleSwitchVersion(version.id)}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-sm text-slate-100">{version.name}</span>
-                          {version.isActive && (
-                            <span className="px-2 py-0.5 bg-indigo-600 text-white text-xs font-bold rounded-full">
-                              Active
-                            </span>
-                          )}
-                        </div>
-                        {version.description && (
-                          <div className="text-xs text-slate-400 mb-1">{version.description}</div>
-                        )}
-                        <div className="text-xs text-slate-500">
-                          Modified: {formatDate(version.lastModified)}
-                        </div>
-                      </div>
-                      <div className="flex gap-1 mt-2">
-                        <button
-                          onClick={() => handleStartEdit(version)}
-                          className="px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs transition-colors"
-                          title="Edit"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDuplicateVersion(version.id)}
-                          className="px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs transition-colors"
-                          title="Duplicate"
-                        >
-                          📋
-                        </button>
-                        <button
-                          onClick={() => handleDeleteVersion(version.id)}
-                          className="px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Delete"
-                          disabled={versions.length === 1}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <button
-              className="w-full p-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-b-xl transition-colors"
-              onClick={() => setShowCreateModal(true)}
+      {isOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50" onClick={() => setIsOpen(false)}>
+            <div
+              className="absolute bg-surface border border-border rounded-xl shadow-xl max-h-96 overflow-y-auto w-80 text-charcoal text-xs"
+              style={{ top: dropdownPos.top, left: dropdownPos.left }}
+              onClick={(e) => e.stopPropagation()}
             >
-              + Create New Version
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
+              <div className="p-2 space-y-1.5">
+                {versions.map((version) => (
+                  <div
+                    key={version.id}
+                    className={`p-2.5 rounded-lg border transition-colors ${
+                      version.isActive
+                        ? 'bg-accent-light/50 border-accent/40'
+                        : 'bg-surface border-border-subtle hover:bg-surface-subtle'
+                    }`}
+                  >
+                    {editingVersion === version.id ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Version name"
+                          autoFocus
+                        />
+                        <Input
+                          value={editDesc}
+                          onChange={(e) => setEditDesc(e.target.value)}
+                          placeholder="Description (optional)"
+                        />
+                        <div className="flex gap-1.5">
+                          <Button size="sm" variant="accent" onClick={handleSaveEdit}>
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingVersion(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div
+                          className={`flex items-start justify-between gap-2 ${
+                            version.isActive ? 'cursor-default' : 'cursor-pointer'
+                          }`}
+                          onClick={() => !version.isActive && handleSwitchVersion(version.id)}
+                        >
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="font-semibold text-charcoal text-sm">
+                                {version.name}
+                              </span>
+                              {version.isActive && (
+                                <Badge variant="accent" size="sm">
+                                  Active
+                                </Badge>
+                              )}
+                            </div>
+                            {version.description && (
+                              <p className="text-steel text-xs mb-1 line-clamp-2">
+                                {version.description}
+                              </p>
+                            )}
+                            <span className="text-steel/70 text-xs">
+                              {formatDate(version.lastModified)}
+                            </span>
+                          </div>
+                        </div>
 
-      {showCreateModal && createPortal(
-        <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm overflow-y-auto z-[9999]"
-          onClick={() => setShowCreateModal(false)}
-        >
-          <div className="min-h-full flex items-center justify-center p-4 sm:p-6 md:p-8">
-            <div className="bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-xl font-bold text-slate-100 mb-4">Create New Version</h3>
-              <input
-                type="text"
-                value={newVersionName}
-                onChange={(e) => setNewVersionName(e.target.value)}
-                placeholder="Version name (e.g., Movie Characters)"
-                className="w-full px-4 py-3 mb-3 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                autoFocus
-              />
-              <input
-                type="text"
-                value={newVersionDesc}
-                onChange={(e) => setNewVersionDesc(e.target.value)}
-                placeholder="Description (optional)"
-                className="w-full px-4 py-3 mb-3 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-              />
-              <label className="flex items-center gap-2 mb-4 text-sm text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={copyFromActive}
-                  onChange={(e) => setCopyFromActive(e.target.checked)}
-                  className="w-4 h-4 cursor-pointer"
-                />
-                Copy from active version
-              </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCreateVersion}
-                  className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-colors"
+                        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border-subtle">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleStartEdit(version)}
+                            title="Edit"
+                            className="h-7 px-2"
+                            icon={<Edit2 className="w-3 h-3 text-steel" />}
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDuplicateVersion(version.id)}
+                            title="Duplicate"
+                            className="h-7 px-2"
+                            icon={<Copy className="w-3 h-3 text-steel" />}
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteVersion(version.id)}
+                            title="Delete"
+                            disabled={versions.length === 1}
+                            className="h-7 px-2 text-danger hover:text-danger-dark"
+                            icon={<Trash2 className="w-3 h-3" />}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-2 border-t border-border bg-surface-subtle/50">
+                <Button
+                  variant="accent"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setShowCreateModal(true);
+                  }}
+                  icon={<Plus className="w-3.5 h-3.5" />}
                 >
-                  Create
-                </button>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
+                  Create New Version
+                </Button>
               </div>
             </div>
+          </div>,
+          document.body,
+        )}
+
+      {/* Create Version Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Version"
+        subtitle="Organize separate PAO decks for different domains or themes"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <FormField label="Version Name" required>
+            <Input
+              value={newVersionName}
+              onChange={(e) => setNewVersionName(e.target.value)}
+              placeholder="e.g., Movie Heroes, History 101"
+              autoFocus
+            />
+          </FormField>
+
+          <FormField label="Description">
+            <Input
+              value={newVersionDesc}
+              onChange={(e) => setNewVersionDesc(e.target.value)}
+              placeholder="Short note about this deck's theme"
+            />
+          </FormField>
+
+          <label className="flex items-center gap-2 text-xs text-charcoal cursor-pointer">
+            <input
+              type="checkbox"
+              checked={copyFromActive}
+              onChange={(e) => setCopyFromActive(e.target.checked)}
+              className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
+            />
+            <span>Copy current active deck items to start</span>
+          </label>
+
+          <div className="flex gap-2 justify-end pt-3 border-t border-border">
+            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="accent"
+              onClick={handleCreateVersion}
+              disabled={!newVersionName.trim()}
+            >
+              Create Version
+            </Button>
           </div>
-        </div>,
-        document.body
-      )}
+        </div>
+      </Modal>
     </div>
   );
 }

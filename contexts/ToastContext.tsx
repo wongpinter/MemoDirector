@@ -85,21 +85,21 @@ interface ToastItemProps {
 
 const ToastItem: React.FC<ToastItemProps> = ({ toast, onClose }) => {
   const bgColor = {
-    success: 'bg-emerald-600',
-    error: 'bg-red-600',
-    warning: 'bg-amber-600',
-    info: 'bg-indigo-600'
+    success: 'bg-accent text-surface border border-accent/40',
+    error: 'bg-danger text-surface border border-danger/40',
+    warning: 'bg-conflict text-surface border border-conflict/40',
+    info: 'bg-charcoal text-surface border border-charcoal-dark',
   }[toast.type];
 
   return (
     <div
-      className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] max-w-md pointer-events-auto animate-slide-in`}
+      className={`${bgColor} px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-72 max-w-md pointer-events-auto animate-slide-in font-sans`}
       role="alert"
     >
       <span className="flex-1 text-sm font-medium">{toast.message}</span>
       <button
         onClick={() => onClose(toast.id)}
-        className="text-white/80 hover:text-white transition-colors"
+        className="text-surface/80 hover:text-surface transition-colors p-1"
         aria-label="Close notification"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,4 +108,4 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onClose }) => {
       </button>
     </div>
   );
-}
+};

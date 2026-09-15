@@ -3,6 +3,7 @@ import { PAOItem, PAOVersion } from '../types';
 import { getPhoneticsForNumber } from '../constants';
 import { Download, Copy, FileText, ChevronLeft, ChevronRight, Rotate3D, BookOpen, Package } from 'lucide-react';
 import { listVersions, getActiveVersion } from '../services/paoStore';
+import { Card, Button, Select, Badge, Notice, TabGroup } from './ui';
 
 interface AnkiExportProps {
   items: PAOItem[];
@@ -19,41 +20,39 @@ export const AnkiExport: React.FC<AnkiExportProps> = ({ items }) => {
   const [showTutorial, setShowTutorial] = useState(false);
   const [exportType, setExportType] = useState<ExportType>('complete');
 
-  // Load versions on mount
   useEffect(() => {
     const loadedVersions = listVersions();
     setVersions(loadedVersions);
-    
+
     const active = getActiveVersion();
     if (active) {
       setSelectedVersionId(active.id);
     }
   }, []);
 
-  // Update display items when selection changes
   useEffect(() => {
     if (selectedVersionId) {
-      const version = versions.find(v => v.id === selectedVersionId);
+      const version = versions.find((v) => v.id === selectedVersionId);
       if (version) {
         setDisplayItems(version.items);
       }
     } else {
       setDisplayItems(items);
     }
-    setPreviewIndex(0); // Reset preview when version changes
+    setPreviewIndex(0);
   }, [selectedVersionId, versions, items]);
 
-  const completedItems = displayItems.filter(i => i.completed);
-  const selectedVersion = versions.find(v => v.id === selectedVersionId);
+  const completedItems = displayItems.filter((i) => i.completed);
+  const selectedVersion = versions.find((v) => v.id === selectedVersionId);
 
-  // Demo item for when no items are completed yet
   const demoItem: PAOItem = {
     number: 0,
-    person: "Zorro",
+    person: 'Zorro',
     action: "Slicing a 'Z' mark",
-    object: "Sword",
-    scene: "Zorro dramatically slashes a glowing red 'Z' into the velvet curtains using his silver Sword, while the audience gasps.",
-    completed: true
+    object: 'Sword',
+    scene:
+      'Zorro dramatically slashes a glowing red Z mark into the curtains using his silver sword.',
+    completed: true,
   };
 
   const activeItem = completedItems.length > 0 ? completedItems[previewIndex] : demoItem;
@@ -78,612 +77,400 @@ html, body {
   padding: 0;
   width: 100%;
   height: 100%;
-  background-color: #0f172a;
+  background-color: #dcdcdd;
 }
-
-/* Target Anki's body wrapper class */
 .card {
-  font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
-  background-color: #0f172a !important; /* Force dark theme */
-  color: #f8fafc;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  background-color: #ffffff !important;
+  color: #46494c;
   font-size: 16px;
   line-height: 1.5;
   margin: 0 !important;
   padding: 0;
   width: 100%;
-  min-height: 100vh; /* Ensure full screen fill */
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
 }
-
-/* Inner container for our content */
 .flashcard-container {
   width: 100%;
-  max-width: 600px;
-  padding: 20px;
+  max-width: 540px;
+  padding: 24px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
   justify-content: center;
 }
-
-/* Front Side */
 .front-wrapper {
   text-align: center;
-  padding: 40px 20px;
+  padding: 32px 16px;
 }
-
 .front-number {
-  font-size: 140px;
-  font-weight: 900;
-  background: linear-gradient(135deg, #818cf8, #c084fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: #818cf8; /* Fallback */
-  filter: drop-shadow(0 4px 15px rgba(129, 140, 248, 0.4));
+  font-family: 'Fraunces', serif;
+  font-size: 110px;
+  font-weight: 800;
+  color: #1985a1;
   margin: 0;
   line-height: 1;
-  letter-spacing: -4px;
 }
-
 .front-hint {
+  font-size: 14px;
+  color: #4c5c68;
   margin-top: 16px;
-  font-size: 18px;
-  color: #64748b;
-  font-family: monospace;
-  background: #1e293b;
+  font-family: 'Space Mono', monospace;
+  background: #e5e4e6;
   padding: 4px 12px;
-  border-radius: 20px;
+  border-radius: 9999px;
   display: inline-block;
+  border: 1px solid #c5c3c6;
 }
-
-/* Back Side */
 .back-container {
   width: 100%;
-  max-width: 360px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 20px;
+  max-width: 500px;
+  border: 1px solid #c5c3c6;
+  border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+  background: #ffffff;
+  box-sizing: border-box;
 }
-
 .header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  border-bottom: 2px solid #334155;
+  border-bottom: 1px solid #c5c3c6;
   padding-bottom: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
-
 .header-number {
+  font-family: 'Fraunces', serif;
   font-size: 32px;
-  font-weight: 900;
-  color: #818cf8;
+  font-weight: 800;
+  color: #1985a1;
 }
-
 .header-phonetic {
-  font-family: monospace;
-  color: #94a3b8;
-  font-size: 14px;
+  font-size: 12px;
+  color: #4c5c68;
+  font-family: 'Space Mono', monospace;
 }
-
 .pao-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
-
 .pao-item {
   display: flex;
-  flex-direction: column;
-  padding: 10px 14px;
-  background: #0f172a;
-  border-radius: 10px;
-  border-left-width: 4px;
-  border-left-style: solid;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #e5e4e6;
 }
-
-.pao-item.person { border-left-color: #38bdf8; } /* Sky */
-.pao-item.action { border-left-color: #34d399; } /* Emerald */
-.pao-item.object { border-left-color: #f472b6; } /* Pink */
-
-.label {
-  font-size: 10px;
+.pao-item .label {
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  font-weight: 800;
-  margin-bottom: 2px;
-  opacity: 0.9;
+  letter-spacing: 0.05em;
+  color: #4c5c68;
+  width: 70px;
+  flex-shrink: 0;
 }
-
-.pao-item.person .label { color: #38bdf8; }
-.pao-item.action .label { color: #34d399; }
-.pao-item.object .label { color: #f472b6; }
-
-.value {
-  font-size: 18px;
-  font-weight: 600;
-  color: #e2e8f0;
-  line-height: 1.3;
-}
-
-.scene-box {
-  position: relative;
-  background: linear-gradient(145deg, #312e81, #1e1b4b);
-  border-radius: 16px;
-  padding: 24px 20px 20px 20px;
-  border: 1px solid #4f46e5;
-  box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
-}
-
-.scene-tag {
-  position: absolute;
-  top: -10px;
-  left: 16px;
-  background: #4f46e5;
-  color: white;
-  font-size: 10px;
-  font-weight: bold;
-  padding: 4px 10px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-}
-
-.scene-text {
-  font-style: italic;
-  color: #e0e7ff;
+.pao-item .value {
   font-size: 15px;
-  line-height: 1.6;
-  text-align: left;
+  font-weight: 600;
+  color: #46494c;
 }
-`.trim();
+.scene-box {
+  border-top: 1px solid #c5c3c6;
+  padding-top: 12px;
+}
+.scene-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1985a1;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.scene-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4c5c68;
+  font-style: italic;
+}
+`;
 
-  const getSceneText = (item: PAOItem) => {
-    if (item.scene && item.scene.trim().length > 0) return item.scene;
-    return `${item.person} is ${item.action.toLowerCase()} with ${item.object.toLowerCase()}.`;
-  };
-
-  // Complete export: front with hint, back with PAO + scene
   const generateFrontHtml = (item: PAOItem) => {
     const num = item.number.toString().padStart(2, '0');
     const ph = getPhoneticsForNumber(item.number);
-    return `
-<div class="flashcard-container">
-  <div class="front-wrapper">
-    <div class="front-number">${num}</div>
-    <div class="front-hint">${ph}</div>
-  </div>
-</div>`;
+    return `<div class="card"><div class="flashcard-container"><div class="front-wrapper"><div class="front-number">${num}</div><div class="front-hint">${ph}</div></div></div></div>`;
   };
 
   const generateBackHtml = (item: PAOItem) => {
     const num = item.number.toString().padStart(2, '0');
     const ph = getPhoneticsForNumber(item.number);
-    const sceneText = getSceneText(item);
-    
-    return `
-<div class="flashcard-container">
-  <div class="back-container">
-    <div class="header">
-      <span class="header-number">#${num}</span>
-      <span class="header-phonetic">${ph}</span>
-    </div>
-    <div class="pao-list">
-      <div class="pao-item person">
-        <span class="label">Person</span>
-        <div class="value">${item.person}</div>
-      </div>
-      <div class="pao-item action">
-        <span class="label">Action</span>
-        <div class="value">${item.action}</div>
-      </div>
-      <div class="pao-item object">
-        <span class="label">Object</span>
-        <div class="value">${item.object}</div>
-      </div>
-    </div>
-    <div class="scene-box">
-      <div class="scene-tag">Director's Cut</div>
-      <div class="scene-text">"${sceneText}"</div>
-    </div>
-  </div>
-</div>`;
+    return `<div class="card"><div class="flashcard-container"><div class="back-container"><div class="header"><span class="header-number">#${num}</span><span class="header-phonetic">${ph}</span></div><div class="pao-list"><div class="pao-item"><span class="label">Person</span><div class="value">${item.person}</div></div><div class="pao-item"><span class="label">Action</span><div class="value">${item.action}</div></div><div class="pao-item"><span class="label">Object</span><div class="value">${item.object}</div></div></div>${item.scene ? `<div class="scene-box"><div class="scene-tag">Director's Cut</div><div class="scene-text">&ldquo;${item.scene}&rdquo;</div></div>` : ''}</div></div></div>`;
   };
 
-  // Minimalist export: front number only (no hint), back PAO only (no scene)
   const generateMinimalistFrontHtml = (item: PAOItem) => {
     const num = item.number.toString().padStart(2, '0');
-    return `
-<div class="flashcard-container">
-  <div class="front-wrapper">
-    <div class="front-number">${num}</div>
-  </div>
-</div>`;
+    return `<div class="card"><div class="flashcard-container"><div class="front-wrapper"><div class="front-number">${num}</div></div></div></div>`;
   };
 
   const generateMinimalistBackHtml = (item: PAOItem) => {
     const num = item.number.toString().padStart(2, '0');
-    
-    return `
-<div class="flashcard-container">
-  <div class="back-container">
-    <div class="header">
-      <span class="header-number">#${num}</span>
-    </div>
-    <div class="pao-list" style="margin-bottom: 0;">
-      <div class="pao-item person">
-        <span class="label">Person</span>
-        <div class="value">${item.person}</div>
-      </div>
-      <div class="pao-item action">
-        <span class="label">Action</span>
-        <div class="value">${item.action}</div>
-      </div>
-      <div class="pao-item object">
-        <span class="label">Object</span>
-        <div class="value">${item.object}</div>
-      </div>
-    </div>
-  </div>
-</div>`;
+    return `<div class="card"><div class="flashcard-container"><div class="back-container"><div class="header"><span class="header-number">#${num}</span></div><div class="pao-list"><div class="pao-item"><span class="label">Person</span><div class="value">${item.person}</div></div><div class="pao-item"><span class="label">Action</span><div class="value">${item.action}</div></div><div class="pao-item"><span class="label">Object</span><div class="value">${item.object}</div></div></div></div></div></div>`;
   };
 
   const handleDownloadTXT = (type: ExportType = 'complete') => {
-    // Use Tab separator (Standard for Anki) to avoid conflicts with CSS semicolons and HTML attributes
-    const sep = "\t";
-    // Reordered Columns: Front HTML and Back HTML first, then metadata
-    // This ensures Anki's default mapping (Field 1->Front, Field 2->Back) works out of the box.
-    const header = `Front${sep}Back${sep}Number${sep}Person${sep}Action${sep}Object\n`;
-    
-    const rows = completedItems.map(item => {
-      const num = item.number.toString().padStart(2, '0');
-      
-      // Prepare CSS - strip newlines/tabs for TSV safety
-      const styleTag = `<style>${cardCSS.replace(/[\r\n\t]/g, ' ')}</style>`;
-      
-      // Prepare Content based on export type - strip newlines/tabs for TSV safety
-      const frontHtml = type === 'minimalist' 
-        ? generateMinimalistFrontHtml(item).replace(/[\r\n\t]/g, ' ')
-        : generateFrontHtml(item).replace(/[\r\n\t]/g, ' ');
-      const backHtml = type === 'minimalist'
-        ? generateMinimalistBackHtml(item).replace(/[\r\n\t]/g, ' ')
-        : generateBackHtml(item).replace(/[\r\n\t]/g, ' ');
-      
-      // Combined (Inject CSS into the fields for the text export)
-      const front = styleTag + frontHtml;
-      const back = styleTag + backHtml;
+    const sep = '\t';
+    const header = `#separator:tab\n#html:true\nFront${sep}Back${sep}Number${sep}Person${sep}Action${sep}Object\n`;
 
-      // ORDER IS CRITICAL: Front, Back, then other fields
-      return `${front}${sep}${back}${sep}${num}${sep}${item.person}${sep}${item.action}${sep}${item.object}`;
-    }).join("\n");
+    const rows = completedItems
+      .map((item) => {
+        const num = item.number.toString().padStart(2, '0');
+        const styleTag = `<style>${cardCSS.replace(/[\r\n\t]/g, ' ')}</style>`;
+        const frontHtml =
+          type === 'minimalist'
+            ? generateMinimalistFrontHtml(item).replace(/[\r\n\t]/g, ' ')
+            : generateFrontHtml(item).replace(/[\r\n\t]/g, ' ');
+        const backHtml =
+          type === 'minimalist'
+            ? generateMinimalistBackHtml(item).replace(/[\r\n\t]/g, ' ')
+            : generateBackHtml(item).replace(/[\r\n\t]/g, ' ');
+
+        const front = styleTag + frontHtml;
+        const back = styleTag + backHtml;
+
+        return `${front}${sep}${back}${sep}${num}${sep}${item.person}${sep}${item.action}${sep}${item.object}`;
+      })
+      .join('\n');
 
     const blob = new Blob([header + rows], { type: 'text/plain;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    
-    // Include version name and export type in filename
+
     const versionName = selectedVersion?.name.toLowerCase().replace(/\s+/g, '_') || 'default';
     const typeSuffix = type === 'minimalist' ? '_minimalist' : '';
     link.setAttribute('download', `pao_deck_${versionName}${typeSuffix}.txt`);
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setShowTutorial(true); // Auto show tutorial on download
-  };
-
-
-
-  // Render preview content safely
-  const renderPreviewContent = () => {
-    if (!isFlipped) {
-      // Front card
-      return (
-        <div className="front-wrapper">
-            <div className="front-number">{numStr}</div>
-            {exportType === 'complete' && <div className="front-hint">{phonetics}</div>}
-        </div>
-      );
-    }
-    
-    // Back card
-    if (exportType === 'minimalist') {
-      return (
-        <div className="back-container">
-          <div className="header">
-              <span className="header-number">#{numStr}</span>
-          </div>
-          <div className="pao-list" style={{ marginBottom: 0 }}>
-              <div className="pao-item person">
-              <span className="label">Person</span>
-              <div className="value">{activeItem.person}</div>
-              </div>
-              <div className="pao-item action">
-              <span className="label">Action</span>
-              <div className="value">{activeItem.action}</div>
-              </div>
-              <div className="pao-item object">
-              <span className="label">Object</span>
-              <div className="value">{activeItem.object}</div>
-              </div>
-          </div>
-        </div>
-      );
-    }
-
-    const sceneText = getSceneText(activeItem);
-    return (
-      <div className="back-container">
-        <div className="header">
-            <span className="header-number">#{numStr}</span>
-            <span className="header-phonetic">{phonetics}</span>
-        </div>
-        <div className="pao-list">
-            <div className="pao-item person">
-            <span className="label">Person</span>
-            <div className="value">{activeItem.person}</div>
-            </div>
-            <div className="pao-item action">
-            <span className="label">Action</span>
-            <div className="value">{activeItem.action}</div>
-            </div>
-            <div className="pao-item object">
-            <span className="label">Object</span>
-            <div className="value">{activeItem.object}</div>
-            </div>
-        </div>
-        <div className="scene-box">
-            <div className="scene-tag">Director's Cut</div>
-            <div className="scene-text">"{sceneText}"</div>
-        </div>
-      </div>
-    );
+    setShowTutorial(true);
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 w-full">
-      
-      {/* Top Section: Title, Version Selector & Download */}
-      <div className="bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-slate-700 shadow-xl space-y-4">
+    <div className="w-full max-w-5xl mx-auto py-4 px-2 space-y-6">
+      {/* Top Banner: Export Action */}
+      <Card variant="paper" padding="md" className="space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">Anki Export</h2>
-            <p className="text-slate-400 text-xs sm:text-sm">
-              {completedItems.length > 0 
-                ? `Ready to export ${completedItems.length} cards from ${selectedVersion?.name || 'selected version'}.` 
-                : "Complete some PAO items to enable export."}
+            <h2 className="text-xl sm:text-2xl font-display font-bold text-charcoal">
+              Anki Deck Export
+            </h2>
+            <p className="text-steel text-xs sm:text-sm mt-0.5">
+              {completedItems.length > 0
+                ? `${completedItems.length} cards ready for export from "${selectedVersion?.name || 'Selected Version'}"`
+                : 'Complete some PAO card entries to enable deck export.'}
             </p>
           </div>
+
           <div className="flex gap-2 w-full md:w-auto">
-            <button 
-                onClick={() => {
-                    handleDownloadTXT('complete');
-                    setShowTutorial(true);
-                }}
-                disabled={completedItems.length === 0}
-                className="h-10 sm:h-12 px-4 sm:px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-sm sm:text-base font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex-1 md:flex-initial"
-                title="Export complete deck with hints and scenes"
+            <Button
+              variant="accent"
+              size="md"
+              disabled={completedItems.length === 0}
+              onClick={() => handleDownloadTXT('complete')}
+              icon={<Download className="w-4 h-4" />}
             >
-                <Download size={18} className="sm:w-5 sm:h-5" /> Complete
-            </button>
-            <button 
-                onClick={() => {
-                    handleDownloadTXT('minimalist');
-                    setShowTutorial(true);
-                }}
-                disabled={completedItems.length === 0}
-                className="h-10 sm:h-12 px-4 sm:px-6 bg-slate-600 hover:bg-slate-500 text-white text-sm sm:text-base font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex-1 md:flex-initial"
-                title="Export minimalist deck (number only, PAO without scene)"
+              Export Complete Deck
+            </Button>
+            <Button
+              variant="outline"
+              size="md"
+              disabled={completedItems.length === 0}
+              onClick={() => handleDownloadTXT('minimalist')}
+              icon={<Download className="w-4 h-4" />}
             >
-                <Download size={18} className="sm:w-5 sm:h-5" /> Minimalist
-            </button>
+              Minimalist
+            </Button>
           </div>
         </div>
 
-        {/* Version Selector & Export Type */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-2 border-t border-slate-700">
+        {/* Filters & Options */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-3 border-t border-border">
           {versions.length > 0 && (
-            <div className="flex items-center gap-3 flex-1">
-              <span className="text-sm text-slate-400 font-semibold">Version:</span>
-              <select
-                value={selectedVersionId || ''}
-                onChange={(e) => setSelectedVersionId(e.target.value)}
-                className="flex-1 md:flex-initial bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {versions.map(version => (
-                  <option key={version.id} value={version.id}>
-                    {version.name} {version.isActive ? '(Active)' : ''} - {version.items.filter(i => i.completed).length} cards
-                  </option>
-                ))}
-              </select>
+            <div className="flex items-center gap-2 flex-1 w-full sm:w-auto">
+              <span className="text-xs text-steel font-semibold">Deck Version:</span>
+              <div className="flex-1 sm:max-w-xs">
+                <Select
+                  value={selectedVersionId || ''}
+                  onChange={(e) => setSelectedVersionId(e.target.value)}
+                  className="h-9 text-xs"
+                >
+                  {versions.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name} {v.isActive ? '(Active)' : ''} — {v.items.filter((i) => i.completed).length} cards
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
           )}
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400 font-semibold">Preview:</span>
-            <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-600">
-              <button
-                onClick={() => setExportType('complete')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                  exportType === 'complete' 
-                    ? 'bg-indigo-600 text-white' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Complete
-              </button>
-              <button
-                onClick={() => setExportType('minimalist')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                  exportType === 'minimalist' 
-                    ? 'bg-slate-600 text-white' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Minimalist
-              </button>
-            </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-steel font-semibold">Preview Format:</span>
+            <TabGroup<ExportType>
+              tabs={[
+                { id: 'complete', label: 'Complete' },
+                { id: 'minimalist', label: 'Minimalist' },
+              ]}
+              activeId={exportType}
+              onChange={setExportType}
+              size="sm"
+            />
           </div>
         </div>
-      </div>
+      </Card>
 
-
-
-      {/* Tutorial Section (Collapsible or always visible if toggled) */}
+      {/* Tutorial Banner */}
       {showTutorial && (
-          <div className="bg-slate-800 border border-indigo-500/30 rounded-xl p-6 animate-in slide-in-from-top-2">
-             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <BookOpen className="text-indigo-400" /> How to Import Text to Anki
-                </h3>
-                <button onClick={() => setShowTutorial(false)} className="text-xs text-slate-500 hover:text-white">Dismiss</button>
-             </div>
-             
-             <div className="grid md:grid-cols-2 gap-8">
-                 <div className="space-y-4 text-sm text-slate-300">
-                     <p>If the automatic .APKG file fails, use the Text file with Anki's built-in importer:</p>
-                     <ol className="list-decimal list-inside space-y-2 marker:text-indigo-500 marker:font-bold">
-                         <li>Open Anki on your desktop.</li>
-                         <li>Go to <strong>File</strong> &rarr; <strong>Import...</strong></li>
-                         <li>Select the <code className="bg-slate-900 px-1 py-0.5 rounded text-indigo-300">mindpalace_pao_deck.txt</code> you just downloaded.</li>
-                         <li className="bg-indigo-900/20 p-1 rounded border border-indigo-500/30">
-                             Anki should automatically set the <strong>Field Separator</strong> to <strong>Tab</strong>.
-                         </li>
-                         <li>In the import window, ensure <strong>"Allow HTML in fields"</strong> is <span className="text-emerald-400 font-bold">CHECKED</span>.</li>
-                     </ol>
-                 </div>
-                 <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 text-xs font-mono space-y-2">
-                     <p className="text-slate-400 uppercase font-bold tracking-wider border-b border-slate-800 pb-2 mb-2">New Field Mapping</p>
-                     <div className="flex justify-between items-center bg-indigo-900/20 p-1 rounded -mx-1">
-                         <span className="text-indigo-300 font-bold">Field 1 (Front HTML)</span>
-                         <span className="text-indigo-500">&rarr;</span>
-                         <span className="text-indigo-300 font-bold">Front</span>
-                     </div>
-                     <div className="flex justify-between items-center bg-indigo-900/20 p-1 rounded -mx-1">
-                         <span className="text-indigo-300 font-bold">Field 2 (Back HTML)</span>
-                         <span className="text-indigo-500">&rarr;</span>
-                         <span className="text-indigo-300 font-bold">Back</span>
-                     </div>
-                     <div className="flex justify-between items-center">
-                         <span className="text-slate-500">Field 3 (Number)</span>
-                         <span className="text-slate-600">&rarr;</span>
-                         <span className="text-slate-300">Map to "Tags" or Ignore</span>
-                     </div>
-                     <div className="flex justify-between items-center">
-                         <span className="text-slate-500">Fields 4-6</span>
-                         <span className="text-slate-600">&rarr;</span>
-                         <span className="text-slate-300">Ignore (Metadata)</span>
-                     </div>
-                 </div>
-             </div>
+        <Notice variant="info" title="How to Import Deck into Anki">
+          <div className="space-y-1 mt-1 text-xs">
+            <p>1. Open desktop Anki and go to <strong>File &rarr; Import...</strong></p>
+            <p>2. Select the downloaded <code className="bg-surface px-1 py-0.5 rounded border border-border">pao_deck_*.txt</code> file.</p>
+            <p>3. Confirm Field Separator is <strong>Tab</strong> and <strong>Allow HTML in fields</strong> is checked.</p>
+            <Button size="sm" variant="ghost" onClick={() => setShowTutorial(false)} className="mt-1">
+              Dismiss
+            </Button>
           </div>
+        </Notice>
       )}
 
       {/* Preview Section */}
-      <div className="grid md:grid-cols-2 gap-8">
-        
-        {/* Card Visualizer */}
-        <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between text-sm text-slate-400 px-2">
-                <span className="font-bold uppercase tracking-wider flex items-center gap-2">
-                    <FileText size={14} /> Card Preview
-                </span>
-                {completedItems.length > 0 && (
-                   <span className="font-mono">{previewIndex + 1} / {completedItems.length}</span>
-                )}
-            </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Card Canvas */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-steel px-1">
+            <span className="font-semibold uppercase tracking-wider flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" /> Anki Visualizer
+            </span>
+            {completedItems.length > 0 && (
+              <span className="font-mono">
+                Card {previewIndex + 1} of {completedItems.length}
+              </span>
+            )}
+          </div>
 
-            {/* The Card Stage */}
-            <div className="relative bg-slate-950 rounded-2xl p-8 border border-slate-800 shadow-2xl flex flex-col items-center justify-center min-h-[600px] overflow-hidden">
-                {/* Inject Styles specifically for this preview container */}
-                <style>{cardCSS}</style>
-                
-                {/* 
-                   Note: In the real export, the .card class applies to the Body. 
-                   Here we use a div with class 'card' to simulate it inside the container.
-                   We add 'relative' and 'w-full' to make it behave within our preview box.
-                */}
-                <div className="card w-full relative" style={{ minHeight: '100%', height: 'auto', background: 'transparent' }}>
-                    {renderPreviewContent()}
+          <div className="relative rounded-2xl border border-border bg-canvas p-6 shadow-sm min-h-80 flex flex-col items-center justify-center text-center overflow-hidden">
+            <style>{cardCSS}</style>
+
+            <div
+              className="card w-full"
+              style={{ minHeight: 'auto', background: 'transparent' }}
+            >
+              {!isFlipped ? (
+                <div className="front-wrapper">
+                  <div className="front-number">{numStr}</div>
+                  {exportType === 'complete' && <div className="front-hint">{phonetics}</div>}
                 </div>
-
-                {/* Controls */}
-                <div className="absolute bottom-6 flex items-center gap-4 bg-slate-900/90 p-2 rounded-full border border-slate-700 backdrop-blur shadow-xl z-10">
-                    <button onClick={handlePrev} disabled={completedItems.length === 0} className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white disabled:opacity-30 transition-colors">
-                        <ChevronLeft size={20} />
-                    </button>
-                    <button 
-                        onClick={() => setIsFlipped(!isFlipped)} 
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-sm font-bold transition-colors shadow-lg"
-                    >
-                        <Rotate3D size={16} className={isFlipped ? "rotate-180 transition-transform" : "transition-transform"} />
-                        {isFlipped ? "Show Front" : "Show Back"}
-                    </button>
-                    <button onClick={handleNext} disabled={completedItems.length === 0} className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white disabled:opacity-30 transition-colors">
-                        <ChevronRight size={20} />
-                    </button>
-                </div>
-            </div>
-            <p className="text-center text-xs text-slate-500 italic">
-                * This preview mirrors the styling in the exported deck.
-            </p>
-        </div>
-
-        {/* Instructions */}
-        <div className="space-y-4">
-            
-            <div className="bg-emerald-900/20 border border-emerald-500/20 p-6 rounded-xl">
-                <h4 className="text-emerald-400 font-bold text-lg mb-3 flex items-center gap-2">
-                    <Package size={20} /> Import Instructions
-                </h4>
-                <ol className="list-decimal list-inside text-sm text-slate-300 space-y-3 ml-1">
-                    <li className="pl-2">
-                        Click <strong>Export for Anki</strong> to download the deck file.
-                    </li>
-                    <li className="pl-2">
-                        Open Anki and go to <strong>File → Import...</strong>
-                    </li>
-                    <li className="pl-2">
-                        Select the downloaded <code>mindpalace_pao_deck.txt</code> file.
-                    </li>
-                    <li className="pl-2">
-                        Ensure <strong>"Allow HTML in fields"</strong> is checked.
-                    </li>
-                    <li className="pl-2">
-                        Click <strong>Import</strong> and you're done!
-                    </li>
-                </ol>
-            </div>
-
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 opacity-70 hover:opacity-100 transition-opacity">
-                <h3 className="text-slate-400 font-semibold mb-2 flex items-center gap-2 text-sm">
-                    <Copy size={14} /> Manual CSS (Backup)
-                </h3>
-                <div className="relative group">
-                    <div className="absolute -top-3 -right-3 p-2">
-                        <button 
-                            onClick={() => navigator.clipboard.writeText(cardCSS)}
-                            className="bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-xs font-bold"
-                        >
-                            <Copy size={14} /> Copy
-                        </button>
+              ) : (
+                <div className="back-container">
+                  <div className="header">
+                    <span className="header-number">#{numStr}</span>
+                    {exportType === 'complete' && (
+                      <span className="header-phonetic">{phonetics}</span>
+                    )}
+                  </div>
+                  <div className="pao-list">
+                    <div className="pao-item">
+                      <span className="label">Person</span>
+                      <div className="value">{activeItem.person}</div>
                     </div>
-                    <pre className="bg-slate-950 p-4 rounded-lg text-[10px] leading-relaxed text-indigo-200 font-mono overflow-x-auto h-[180px] border border-slate-900 custom-scrollbar">
-                        {cardCSS}
-                    </pre>
+                    <div className="pao-item">
+                      <span className="label">Action</span>
+                      <div className="value">{activeItem.action}</div>
+                    </div>
+                    <div className="pao-item">
+                      <span className="label">Object</span>
+                      <div className="value">{activeItem.object}</div>
+                    </div>
+                  </div>
+                  {exportType === 'complete' && activeItem.scene && (
+                    <div className="scene-box">
+                      <div className="scene-tag">Director&apos;s Cut</div>
+                      <div className="scene-text">&ldquo;{activeItem.scene}&rdquo;</div>
+                    </div>
+                  )}
                 </div>
+              )}
             </div>
+
+            {/* Flipper Controls */}
+            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border w-full justify-center">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handlePrev}
+                disabled={completedItems.length === 0}
+                icon={<ChevronLeft className="w-4 h-4" />}
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setIsFlipped(!isFlipped)}
+                icon={<Rotate3D className="w-4 h-4" />}
+              >
+                {isFlipped ? 'Show Front' : 'Show Back'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleNext}
+                disabled={completedItems.length === 0}
+                icon={<ChevronRight className="w-4 h-4" />}
+              />
+            </div>
+          </div>
         </div>
 
+        {/* Instructions Card */}
+        <div className="space-y-4">
+          <Card variant="paper" padding="md" className="space-y-3">
+            <h4 className="font-display font-bold text-charcoal text-base flex items-center gap-2">
+              <Package className="w-4 h-4 text-accent" /> Anki Import Checklist
+            </h4>
+            <ol className="list-decimal list-inside text-xs text-steel space-y-2 leading-relaxed">
+              <li>Export and download your <code>.txt</code> deck.</li>
+              <li>In Anki Desktop, choose <strong>File &rarr; Import</strong>.</li>
+              <li>Anki auto-maps Tab separator: Field 1 = Front, Field 2 = Back.</li>
+              <li>Ensure <strong>Allow HTML in fields</strong> is checked.</li>
+              <li>Daily spaced repetition embeds the 00–99 matrix into muscle memory.</li>
+            </ol>
+          </Card>
+
+          <Card variant="subtle" padding="sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-steel flex items-center gap-1">
+                <Copy className="w-3.5 h-3.5" /> Embedded Card CSS
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => navigator.clipboard.writeText(cardCSS)}
+              >
+                Copy CSS
+              </Button>
+            </div>
+            <pre className="p-3 bg-surface rounded-lg text-xs font-mono text-charcoal overflow-x-auto h-36 border border-border">
+              {cardCSS}
+            </pre>
+          </Card>
+        </div>
       </div>
     </div>
   );

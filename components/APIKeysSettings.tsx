@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Key, Eye, EyeOff, Save, Trash2, AlertCircle, CheckCircle, Info, Star } from 'lucide-react';
+import { Eye, EyeOff, Save, Trash2, Info, Star, ExternalLink, Edit2 } from 'lucide-react';
 import { useToast } from '../contexts';
 import {
   setKey,
@@ -10,8 +10,10 @@ import {
   getDefaultModel,
   getPreferredProvider,
   setPreferredProvider,
-  APIKeys
+  APIKeys,
+  LLMProvider,
 } from '../services/llmConfig';
+import { Card, Button, Input, FormField, Notice, Badge } from './ui';
 
 export function APIKeysSettings() {
   const [keys, setKeys] = useState<APIKeys>({});
@@ -19,7 +21,7 @@ export function APIKeysSettings() {
   const [editMode, setEditMode] = useState<Record<string, boolean>>({});
   const [tempKeys, setTempKeys] = useState<Record<string, string>>({});
   const [tempModels, setTempModels] = useState<Record<string, string>>({});
-  const [preferredProvider, setPreferredProviderState] = useState<string | null>(null);
+  const [preferredProvider, setPreferredProviderState] = useState<LLMProvider | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export function APIKeysSettings() {
     setKeys(loadedKeys);
   };
 
-  const handleSetPreferred = (provider: 'gemini' | 'openai' | 'openrouter' | 'ollama') => {
+  const handleSetPreferred = (provider: LLMProvider) => {
     setPreferredProvider(provider);
     setPreferredProviderState(provider);
     showToast(`${provider.toUpperCase()} set as preferred provider`, 'success');
@@ -56,46 +58,42 @@ export function APIKeysSettings() {
       setKey({
         provider,
         key,
-        model: model || getDefaultModel(provider)
+        model: model || getDefaultModel(provider),
       });
-      
+
       loadKeys();
       setEditMode({ ...editMode, [provider]: false });
       setTempKeys({ ...tempKeys, [provider]: '' });
       showToast(`${provider.toUpperCase()} API key saved`, 'success');
-    } catch (error) {
+    } catch {
       showToast('Failed to save API key', 'error');
     }
   };
 
-  const handleDelete = (provider: 'gemini' | 'openai' | 'openrouter' | 'ollama') => {
-    if (confirm(`Delete ${provider.toUpperCase()} API key?`)) {
-      try {
-        removeKey(provider);
-        loadKeys();
-        showToast(`${provider.toUpperCase()} API key deleted`, 'success');
-      } catch (error) {
-        showToast('Failed to delete API key', 'error');
-      }
-    }
-  };
-
   const handleSaveOllama = () => {
-    const baseUrl = tempKeys['ollama_url'] || 'http://localhost:11434';
-    const model = tempModels['ollama'] || 'llama3.2';
+    const baseUrl = tempKeys['ollama_url'] || keys.ollama?.baseUrl || 'http://localhost:11434';
+    const model = tempModels['ollama'] || keys.ollama?.model || getDefaultModel('ollama');
 
     try {
       setKey({
         provider: 'ollama',
         baseUrl,
-        model
+        model,
       });
-      
+
       loadKeys();
       setEditMode({ ...editMode, ollama: false });
       showToast('Ollama configuration saved', 'success');
-    } catch (error) {
-      showToast('Failed to save Ollama configuration', 'error');
+    } catch {
+      showToast('Failed to save Ollama config', 'error');
+    }
+  };
+
+  const handleDelete = (provider: keyof APIKeys) => {
+    if (confirm(`Remove ${provider.toUpperCase()} API key?`)) {
+      removeKey(provider);
+      loadKeys();
+      showToast(`${provider.toUpperCase()} key removed`, 'success');
     }
   };
 
@@ -105,118 +103,72 @@ export function APIKeysSettings() {
 
   const startEdit = (provider: string) => {
     setEditMode({ ...editMode, [provider]: true });
+    if (provider === 'gemini' && keys.gemini) {
+      setTempKeys({ ...tempKeys, gemini: keys.gemini });
+    } else if (provider === 'openai' && keys.openai) {
+      setTempKeys({ ...tempKeys, openai: keys.openai });
+    } else if (provider === 'openrouter' && keys.openrouter) {
+      setTempKeys({ ...tempKeys, openrouter: keys.openrouter });
+    } else if (provider === 'ollama' && keys.ollama) {
+      setTempKeys({ ...tempKeys, ollama_url: keys.ollama.baseUrl });
+      setTempModels({ ...tempModels, ollama: keys.ollama.model });
+    }
   };
 
   const cancelEdit = (provider: string) => {
     setEditMode({ ...editMode, [provider]: false });
-    setTempKeys({ ...tempKeys, [provider]: '' });
+    const updatedTemp = { ...tempKeys };
+    delete updatedTemp[provider];
+    setTempKeys(updatedTemp);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-indigo-600/20 rounded-lg">
-            <Key className="w-6 h-6 text-indigo-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">AI Provider API Keys</h2>
-            <p className="text-sm text-slate-400">Your keys are stored locally and never sent to our servers</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Info Box */}
-      <div className="bg-blue-950/20 border border-blue-600/30 rounded-lg p-4 flex items-start gap-3">
-        <Info size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-blue-300">
-          <p className="font-semibold mb-1">Privacy & Security</p>
-          <ul className="space-y-1 text-blue-200/80">
-            <li>• API keys are stored only on your device (LocalStorage)</li>
-            <li>• Keys are never transmitted to our servers</li>
-            <li>• You need to set keys on each device you use</li>
-            <li>• We only provide the database for syncing your PAO data</li>
-          </ul>
-        </div>
-      </div>
+    <div className="space-y-5">
+      {/* Privacy Notice */}
+      <Notice variant="info" title="Zero-Knowledge Key Storage">
+        <p className="mt-0.5">
+          API keys are encrypted and stored solely in this browser&apos;s LocalStorage. They never
+          traverse or touch our servers.
+        </p>
+      </Notice>
 
       {/* Preferred Provider Selector */}
       {(keys.gemini || keys.openai || keys.openrouter || keys.ollama) && (
-        <div className="bg-indigo-950/20 border border-indigo-600/30 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Star size={18} className="text-indigo-400" />
-            <h3 className="text-sm font-bold text-indigo-300">Preferred Provider</h3>
+        <Card variant="subtle" padding="md" className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Star className="w-4 h-4 text-accent" />
+            <h4 className="font-semibold text-charcoal text-sm">Default AI Model Provider</h4>
           </div>
-          <p className="text-xs text-indigo-200/80 mb-3">
-            If you have multiple API keys, choose which provider to use by default:
+          <p className="text-xs text-steel">
+            Choose which configured provider executes casting and scene generation requests:
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {keys.gemini && (
-              <button
-                onClick={() => handleSetPreferred('gemini')}
-                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  preferredProvider === 'gemini'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                Gemini
-              </button>
-            )}
-            {keys.openai && (
-              <button
-                onClick={() => handleSetPreferred('openai')}
-                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  preferredProvider === 'openai'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                OpenAI
-              </button>
-            )}
-            {keys.openrouter && (
-              <button
-                onClick={() => handleSetPreferred('openrouter')}
-                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  preferredProvider === 'openrouter'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                OpenRouter
-              </button>
-            )}
-            {keys.ollama && (
-              <button
-                onClick={() => handleSetPreferred('ollama')}
-                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  preferredProvider === 'ollama'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                Ollama
-              </button>
-            )}
+          <div className="flex flex-wrap gap-2">
+            {(['gemini', 'openai', 'openrouter', 'ollama'] as const).map((p) => {
+              if (!keys[p]) return null;
+              const isSelected = preferredProvider === p;
+              return (
+                <Button
+                  key={p}
+                  size="sm"
+                  variant={isSelected ? 'accent' : 'outline'}
+                  onClick={() => handleSetPreferred(p)}
+                >
+                  {p.toUpperCase()}
+                </Button>
+              );
+            })}
           </div>
-          {!preferredProvider && (
-            <p className="text-xs text-slate-500 mt-2">
-              Default: Gemini → OpenAI → OpenRouter → Ollama
-            </p>
-          )}
-        </div>
+        </Card>
       )}
 
       {/* Gemini */}
       <ProviderCard
         provider="gemini"
         title="Google Gemini"
-        description="Recommended - Supports image/video generation"
-        hasKey={!!keys.gemini}
-        isEditing={editMode.gemini}
-        showKey={showKeys.gemini}
+        description="Supports scene generation, image rendering, and Veo video"
+        hasKey={Boolean(keys.gemini)}
+        isEditing={Boolean(editMode.gemini)}
+        showKey={Boolean(showKeys.gemini)}
         onToggleShow={() => toggleShow('gemini')}
         onStartEdit={() => startEdit('gemini')}
         onCancelEdit={() => cancelEdit('gemini')}
@@ -235,10 +187,10 @@ export function APIKeysSettings() {
       <ProviderCard
         provider="openai"
         title="OpenAI"
-        description="GPT models"
-        hasKey={!!keys.openai}
-        isEditing={editMode.openai}
-        showKey={showKeys.openai}
+        description="GPT-4o and lightweight mini models"
+        hasKey={Boolean(keys.openai)}
+        isEditing={Boolean(editMode.openai)}
+        showKey={Boolean(showKeys.openai)}
         onToggleShow={() => toggleShow('openai')}
         onStartEdit={() => startEdit('openai')}
         onCancelEdit={() => cancelEdit('openai')}
@@ -257,10 +209,10 @@ export function APIKeysSettings() {
       <ProviderCard
         provider="openrouter"
         title="OpenRouter"
-        description="Access to multiple models"
-        hasKey={!!keys.openrouter}
-        isEditing={editMode.openrouter}
-        showKey={showKeys.openrouter}
+        description="Unified gateway for Claude, Llama, Mistral, and DeepSeek"
+        hasKey={Boolean(keys.openrouter)}
+        isEditing={Boolean(editMode.openrouter)}
+        showKey={Boolean(showKeys.openrouter)}
         onToggleShow={() => toggleShow('openrouter')}
         onStartEdit={() => startEdit('openrouter')}
         onCancelEdit={() => cancelEdit('openrouter')}
@@ -276,78 +228,77 @@ export function APIKeysSettings() {
       />
 
       {/* Ollama */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
+      <Card variant="paper" padding="md" className="space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-white">Ollama (Local)</h3>
-            <p className="text-sm text-slate-400">Run models locally - no API key needed</p>
+            <h4 className="font-semibold text-charcoal text-base">Ollama (Local LLM)</h4>
+            <p className="text-xs text-steel">
+              Run open models locally on your hardware with 0 cloud API tokens.
+            </p>
           </div>
           {keys.ollama && !editMode.ollama && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => startEdit('ollama')}
-                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
-              >
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="ghost" onClick={() => startEdit('ollama')}>
                 Edit
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
                 onClick={() => handleDelete('ollama')}
-                className="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/50 text-red-300 text-sm rounded-lg transition-colors"
-              >
-                <Trash2 size={16} />
-              </button>
+                className="text-danger hover:text-danger-dark"
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              />
             </div>
           )}
         </div>
 
         {(editMode.ollama || !keys.ollama) && (
           <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Base URL</label>
-              <input
+            <FormField label="Base URL">
+              <Input
                 type="text"
-                value={tempKeys['ollama_url'] || keys.ollama?.baseUrl || 'http://localhost:11434'}
+                value={
+                  tempKeys['ollama_url'] || keys.ollama?.baseUrl || 'http://localhost:11434'
+                }
                 onChange={(e) => setTempKeys({ ...tempKeys, ollama_url: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="http://localhost:11434"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Model</label>
-              <input
+            </FormField>
+
+            <FormField label="Model Identifier">
+              <Input
                 type="text"
                 value={tempModels['ollama'] || keys.ollama?.model || 'llama3.2'}
                 onChange={(e) => setTempModels({ ...tempModels, ollama: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="llama3.2"
               />
-            </div>
+            </FormField>
+
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="accent"
+                size="sm"
                 onClick={handleSaveOllama}
-                className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                icon={<Save className="w-3.5 h-3.5" />}
               >
-                <Save size={16} /> Save
-              </button>
+                Save Ollama
+              </Button>
               {keys.ollama && (
-                <button
-                  onClick={() => cancelEdit('ollama')}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-                >
+                <Button size="sm" variant="ghost" onClick={() => cancelEdit('ollama')}>
                   Cancel
-                </button>
+                </Button>
               )}
             </div>
           </div>
         )}
 
         {keys.ollama && !editMode.ollama && (
-          <div className="text-sm text-slate-400">
-            <p>Base URL: {keys.ollama.baseUrl}</p>
-            <p>Model: {keys.ollama.model}</p>
+          <div className="bg-surface-subtle p-3 rounded-lg border border-border text-xs font-mono text-charcoal space-y-1">
+            <div>Base URL: {keys.ollama.baseUrl}</div>
+            <div>Model: {keys.ollama.model}</div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -374,7 +325,6 @@ interface ProviderCardProps {
 }
 
 function ProviderCard({
-  provider,
   title,
   description,
   hasKey,
@@ -391,93 +341,107 @@ function ProviderCard({
   tempModel,
   onModelChange,
   defaultModel,
-  getKeyLink
+  getKeyLink,
 }: ProviderCardProps) {
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
+    <Card variant="paper" padding="md" className="space-y-4">
+      <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-lg font-bold text-white">{title}</h3>
-          <p className="text-sm text-slate-400">{description}</p>
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold text-charcoal text-base">{title}</h4>
+            {hasKey && (
+              <Badge variant="subtle" size="sm">
+                Configured
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-steel mt-0.5">{description}</p>
         </div>
+
         {hasKey && !isEditing && (
-          <div className="flex gap-2">
-            <button
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
               onClick={onToggleShow}
-              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
-            >
-              {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-            <button
+              icon={
+                showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />
+              }
+              title={showKey ? 'Hide key' : 'Show key'}
+            />
+            <Button
+              size="sm"
+              variant="ghost"
               onClick={onStartEdit}
-              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
-            >
-              Edit
-            </button>
-            <button
+              icon={<Edit2 className="w-3.5 h-3.5" />}
+              title="Edit key"
+            />
+            <Button
+              size="sm"
+              variant="ghost"
               onClick={onDelete}
-              className="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/50 text-red-300 text-sm rounded-lg transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+              className="text-danger hover:text-danger-dark"
+              icon={<Trash2 className="w-3.5 h-3.5" />}
+              title="Delete key"
+            />
           </div>
         )}
       </div>
 
       {hasKey && !isEditing && (
-        <div className="bg-slate-900 rounded-lg p-3 font-mono text-sm text-slate-300">
+        <div className="bg-surface-subtle p-3 rounded-lg border border-border text-xs font-mono text-charcoal">
           {showKey ? keyValue : maskAPIKey(keyValue || '')}
         </div>
       )}
 
       {(isEditing || !hasKey) && (
         <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">API Key</label>
-            <input
+          <FormField label="API Key" required>
+            <Input
               type="password"
               value={tempKey || ''}
               onChange={(e) => onKeyChange(e.target.value)}
-              className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Enter your API key"
+              placeholder="Paste your key here..."
             />
+          </FormField>
+
+          <FormField label="Default Model (optional)">
+            <Input
+              type="text"
+              value={tempModel || ''}
+              onChange={(e) => onModelChange(e.target.value)}
+              placeholder={defaultModel}
+            />
+          </FormField>
+
+          <div className="flex items-center justify-between pt-1">
             <a
               href={getKeyLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-indigo-400 hover:text-indigo-300 mt-1 inline-block"
+              className="text-xs font-medium text-accent hover:underline flex items-center gap-1"
             >
-              Get API key →
+              Get API Key <ExternalLink className="w-3 h-3" />
             </a>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Model (optional)</label>
-            <input
-              type="text"
-              value={tempModel || ''}
-              onChange={(e) => onModelChange(e.target.value)}
-              className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder={defaultModel}
-            />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={onSave}
-              className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
-              <Save size={16} /> Save
-            </button>
-            {hasKey && (
-              <button
-                onClick={onCancelEdit}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+
+            <div className="flex gap-2">
+              {hasKey && (
+                <Button size="sm" variant="ghost" onClick={onCancelEdit}>
+                  Cancel
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="accent"
+                onClick={onSave}
+                icon={<Save className="w-3.5 h-3.5" />}
               >
-                Cancel
-              </button>
-            )}
+                Save Key
+              </Button>
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

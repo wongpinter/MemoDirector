@@ -1,10 +1,38 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { PAOItem, Suggestion } from '../types';
 import { getPhoneticsForNumber, DEFAULT_THEMES } from '../constants';
-import { getPAOSuggestions, getSceneDescription, generateMemoryImage, generateMemoryVideo } from '../services/llmService';
+import {
+  getPAOSuggestions,
+  getSceneDescription,
+  generateMemoryImage,
+  generateMemoryVideo,
+} from '../services/llmService';
 import { uploadMedia } from '../services/db';
-import { X, Sparkles, Save, Wand2, AlertCircle, Clapperboard, Undo2, ArrowRight, Users, Megaphone, Trash2, Ear, Image as ImageIcon, Video as VideoIcon, Loader2, Play, AlertTriangle } from 'lucide-react';
+import {
+  Sparkles,
+  Save,
+  Clapperboard,
+  Undo2,
+  Users,
+  Megaphone,
+  Trash2,
+  Ear,
+  Image as ImageIcon,
+  Video as VideoIcon,
+  AlertTriangle,
+} from 'lucide-react';
 import { detectConflicts } from '../utils/conflictDetection';
+import {
+  Modal,
+  Button,
+  Input,
+  Textarea,
+  Select,
+  Badge,
+  FormField,
+  Notice,
+  Card,
+} from './ui';
 
 interface PAOEditorProps {
   number: number;
@@ -14,21 +42,27 @@ interface PAOEditorProps {
   allItems?: PAOItem[];
 }
 
-export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClose, onSave, allItems = [] }) => {
+export const PAOEditor: React.FC<PAOEditorProps> = ({
+  number,
+  initialData,
+  onClose,
+  onSave,
+  allItems = [],
+}) => {
   const [person, setPerson] = useState(initialData?.person || '');
   const [action, setAction] = useState(initialData?.action || '');
   const [object, setObject] = useState(initialData?.object || '');
   const [scene, setScene] = useState(initialData?.scene || '');
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '');
   const [videoUrl, setVideoUrl] = useState(initialData?.videoUrl || '');
-  
+
   const [theme, setTheme] = useState(DEFAULT_THEMES[0]);
   const [isCustomTheme, setIsCustomTheme] = useState(false);
   const [customThemes, setCustomThemes] = useState<string[]>([]);
   const [personDescription, setPersonDescription] = useState<string>('');
-  
+
   const [strictMode, setStrictMode] = useState(false);
-  
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDirecting, setIsDirecting] = useState(false);
   const [isGenMedia, setIsGenMedia] = useState<'image' | 'video' | null>(null);
@@ -37,686 +71,586 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({ number, initialData, onClo
   const [excludedPersons, setExcludedPersons] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Validation State
-  const [fieldErrors, setFieldErrors] = useState<{ person?: string; action?: string; object?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{
+    person?: string;
+    action?: string;
+    object?: string;
+  }>({});
 
   const CHAR_LIMIT = 280;
   const THEME_STORAGE_KEY = 'mindpalace_custom_themes';
-  
-  // If the user has typed a person, we suggest actions for that person instead of generating a new person.
+
   const hasPersonInput = person.trim().length > 0;
 
-  // Load custom themes on mount
   useEffect(() => {
     try {
-        const stored = localStorage.getItem(THEME_STORAGE_KEY);
-        if (stored) {
-            setCustomThemes(JSON.parse(stored));
-        }
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      if (stored) {
+        setCustomThemes(JSON.parse(stored));
+      }
     } catch (e) {
-        console.error("Failed to load custom themes", e);
+      console.error('Failed to load custom themes', e);
     }
   }, []);
 
-  // Check for conflicts with current values
   const currentConflicts = useMemo(() => {
     if (!person && !action && !object) return null;
-    
+
     const testItem: PAOItem = {
       number,
       person,
       action,
       object,
-      completed: false
+      completed: false,
     };
-    
-    // Create a test array with all items except current number
-    const testItems = [
-      ...allItems.filter(i => i.number !== number),
-      testItem
-    ];
-    
+
+    const testItems = [...allItems.filter((i) => i.number !== number), testItem];
+
     const conflictMap = detectConflicts(testItems);
     return conflictMap.get(number);
   }, [person, action, object, number, allItems]);
 
   const handleSave = () => {
-    // Validation
     const errors: { person?: string; action?: string; object?: string } = {};
     let isValid = true;
 
     if (!person.trim()) {
-        errors.person = "Person is required";
-        isValid = false;
+      errors.person = 'Person is required';
+      isValid = false;
     }
     if (!action.trim()) {
-        errors.action = "Action is required";
-        isValid = false;
+      errors.action = 'Action is required';
+      isValid = false;
     }
     if (!object.trim()) {
-        errors.object = "Object is required";
-        isValid = false;
+      errors.object = 'Object is required';
+      isValid = false;
     }
 
-    setFieldErrors(errors);
-
-    if (isValid) {
-        onSave({
-            number,
-            person,
-            action,
-            object,
-            scene,
-            imageUrl,
-            videoUrl,
-            completed: true
-        });
-        onClose();
+    if (!isValid) {
+      setFieldErrors(errors);
+      return;
     }
+
+    if (isCustomTheme && theme.trim()) {
+      try {
+        const updatedThemes = Array.from(new Set([...customThemes, theme.trim()]));
+        setCustomThemes(updatedThemes);
+        localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(updatedThemes));
+      } catch (e) {
+        console.error('Failed to save custom theme', e);
+      }
+    }
+
+    const updated: PAOItem = {
+      ...initialData,
+      number,
+      person: person.trim(),
+      action: action.trim(),
+      object: object.trim(),
+      scene: scene.trim(),
+      imageUrl: imageUrl.trim() || undefined,
+      videoUrl: videoUrl.trim() || undefined,
+      completed: true,
+      lastModified: Date.now(),
+    };
+
+    onSave(updated);
+    onClose();
   };
 
   const handleGenerate = async () => {
-    if (!import.meta.env.VITE_GEMINI_API_KEY) {
-        setError("API Key missing in env variables. Suggestions unavailable in this demo.");
-        return;
-    }
-
-    // Ensure custom theme is not empty
-    if (isCustomTheme && !theme.trim()) {
-        setError("Please enter a name for your custom theme.");
-        return;
-    }
-
     setIsGenerating(true);
     setError(null);
-    setSuggestions([]); // Clear previous suggestions while loading
-
-    // Save custom theme if it's new
-    if (isCustomTheme && theme.trim().length > 0) {
-        const newTheme = theme.trim();
-        if (!DEFAULT_THEMES.includes(newTheme) && !customThemes.includes(newTheme)) {
-            const updatedThemes = [...customThemes, newTheme];
-            setCustomThemes(updatedThemes);
-            localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(updatedThemes));
-        }
-    }
-
     try {
-      // If user typed a person, pass it to the service to get specific actions
       const results = await getPAOSuggestions(
-          number, 
-          theme, 
-          hasPersonInput ? person : undefined,
-          strictMode,
-          excludedPersons
+        number,
+        theme,
+        hasPersonInput ? person : undefined,
+        strictMode,
+        excludedPersons.length > 0 ? excludedPersons : undefined,
       );
-      
-      // Track the new persons to exclude them in future generations
-      const newPersons = results.map(s => s.person);
-      setExcludedPersons(prev => [...prev, ...newPersons]);
-      
       setSuggestions(results);
+      const newExcluded = results.map((s) => s.person).filter(Boolean);
+      setExcludedPersons((prev) => Array.from(new Set([...prev, ...newExcluded])));
     } catch (e) {
-      console.error("❌ PAO Generation Error:", e);
-      const errorMsg = e instanceof Error ? e.message : "Failed to get suggestions. Try again.";
-      setError(errorMsg);
+      console.error(e);
+      setError(e instanceof Error ? e.message : 'Failed to generate suggestions. Check your API key.');
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handleDirectorCut = async () => {
-     if (!person || !action || !object) {
-         setError("Fill in Person, Action, and Object first.");
-         return;
-     }
-     if (!import.meta.env.VITE_GEMINI_API_KEY) {
-        setScene(`${person} is ${action} with ${object}.`);
-        return;
-     }
-     setIsDirecting(true);
-     try {
-         const desc = await getSceneDescription(person, action, object, theme, personDescription);
-         setScene(desc);
-     } catch (e) {
-         setScene(`${person} is ${action} with ${object}.`);
-     } finally {
-         setIsDirecting(false);
-     }
+    if (!person || !action || !object) return;
+    setIsDirecting(true);
+    setError(null);
+    try {
+      const desc = await getSceneDescription(
+        person,
+        action,
+        object,
+        theme,
+        personDescription || undefined,
+      );
+      setScene(desc);
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : 'Failed to generate scene description.');
+    } finally {
+      setIsDirecting(false);
+    }
   };
 
   const handleGenImage = async () => {
     if (!scene) {
-        setError("Please write or generate a scene description first.");
-        return;
+      setError('Please write or generate a scene description first.');
+      return;
     }
     setIsGenMedia('image');
     setError(null);
     try {
-        const base64 = await generateMemoryImage(scene);
-        
-        // Check base64 size before storing
-        const sizeInBytes = (base64.length * 3) / 4; // Rough base64 size estimation
-        const maxSizeBytes = 500 * 1024; // 500KB limit for local storage
-        
-        if (sizeInBytes > maxSizeBytes) {
-          setError('Image too large for local storage. Uploading to cloud storage...');
-        }
-        
-        // Upload
-        const uploadedUrl = await uploadMedia(number, 'image', base64, 'image/png');
-        
-        if (uploadedUrl) {
-            setImageUrl(uploadedUrl);
-        } else {
-            // Fallback for offline/no-storage: only if image is small enough
-            if (sizeInBytes <= maxSizeBytes) {
-              setImageUrl(base64);
-              setError("Storage not connected. Image saved locally (temporary - won't sync).");
-            } else {
-              setError("Image too large and cloud storage unavailable. Please try again when online.");
-            }
-        }
-    } catch (e: any) {
-        console.error(e);
-        setError(e.message || "Failed to generate image.");
+      const base64Image = await generateMemoryImage(scene);
+      const uploadedUrl = await uploadMedia(number, 'image', base64Image, 'image/png');
+      setImageUrl(uploadedUrl || base64Image);
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : 'Failed to generate image.');
     } finally {
-        setIsGenMedia(null);
+      setIsGenMedia(null);
     }
   };
 
   const handleGenVideo = async () => {
-      if (!scene) {
-          setError("Please write or generate a scene description first.");
-          return;
-      }
+    if (!scene) {
+      setError('Please write or generate a scene description first.');
+      return;
+    }
 
-      // Check for Veo key Requirement
-      // Use type assertion for window to avoid TS errors with aistudio
-      const win = window as unknown as { aistudio?: { hasSelectedApiKey: () => Promise<boolean>; openSelectKey: () => Promise<void> } };
-      
-      if (win.aistudio) {
-          const hasKey = await win.aistudio.hasSelectedApiKey();
-          if (!hasKey) {
-              await win.aistudio.openSelectKey();
-              // Race condition mitigation: Assume success if no error threw, proceed.
-          }
-      }
+    const win = window as unknown as {
+      aistudio?: {
+        hasSelectedApiKey: () => Promise<boolean>;
+        openSelectKey: () => Promise<void>;
+      };
+    };
 
-      setIsGenMedia('video');
-      setError(null);
-      try {
-          const { blob, mimeType } = await generateMemoryVideo(scene);
-          
-          // Convert Blob to Base64 for upload helper
-          const reader = new FileReader();
-          reader.readAsDataURL(blob);
-          reader.onloadend = async () => {
-              const base64data = reader.result as string;
-              const uploadedUrl = await uploadMedia(number, 'video', base64data, mimeType);
-              
-              if (uploadedUrl) {
-                  setVideoUrl(uploadedUrl);
-              } else {
-                  setError("Storage not connected. Cannot save video.");
-              }
-              setIsGenMedia(null);
-          };
-          reader.onerror = () => {
-              setError("Failed to read video file.");
-              setIsGenMedia(null);
-          };
-      } catch (e) {
-          console.error(e);
-          setError("Failed to generate video. Ensure you selected a paid project key.");
-          setIsGenMedia(null);
+    if (win.aistudio) {
+      const hasKey = await win.aistudio.hasSelectedApiKey();
+      if (!hasKey) {
+        await win.aistudio.openSelectKey();
       }
-  }
+    }
+
+    setIsGenMedia('video');
+    setError(null);
+    try {
+      const { blob, mimeType } = await generateMemoryVideo(scene);
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64data = reader.result as string;
+        const uploadedUrl = await uploadMedia(number, 'video', base64data, mimeType);
+        if (uploadedUrl) {
+          setVideoUrl(uploadedUrl);
+        } else {
+          setError('Storage not connected. Cannot save video.');
+        }
+        setIsGenMedia(null);
+      };
+      reader.onerror = () => {
+        setError('Failed to read video file.');
+        setIsGenMedia(null);
+      };
+    } catch (e) {
+      console.error(e);
+      setError('Failed to generate video. Ensure project has Veo support.');
+      setIsGenMedia(null);
+    }
+  };
 
   const applySuggestion = (s: Suggestion) => {
     setPerson(s.person);
     setAction(s.action);
     setObject(s.object);
     setPersonDescription(s.person_description || '');
-    // Clear suggestions and any field errors since we filled them
     setSuggestions([]);
     setFieldErrors({});
   };
 
   const handleClearSuggestions = () => {
     setSuggestions([]);
-    // Reset excluded persons when clearing suggestions
     setExcludedPersons([]);
   };
 
+  const formattedNum = number.toString().padStart(2, '0');
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-      <div className="bg-slate-900 w-full max-w-lg rounded-t-2xl sm:rounded-2xl border border-slate-700 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 fade-in duration-300">
-        
-        {/* Header */}
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900">
-          <div>
-             <h2 className="text-3xl font-mono font-black text-indigo-500 flex items-center gap-2">
-                {number.toString().padStart(2, '0')}
-                <span className="text-sm font-sans font-normal text-slate-400 bg-slate-800 px-2 py-1 rounded-full">
-                    {getPhoneticsForNumber(number)}
-                </span>
-             </h2>
-             <p className="text-slate-400 text-sm mt-1">Edit Association</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
-            <X size={24} />
-          </button>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={
+        <div className="flex items-center gap-3">
+          <span className="font-display text-2xl font-bold text-charcoal">#{formattedNum}</span>
+          <Badge variant="subtle" size="md">
+            {getPhoneticsForNumber(number)}
+          </Badge>
         </div>
+      }
+      subtitle="Edit card association and memory scene"
+      maxWidth="2xl"
+    >
+      <div className="space-y-5">
+        {/* Casting / AI Suggestions */}
+        <Card variant="subtle" padding="sm" className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold text-xs tracking-wider uppercase text-charcoal flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-accent" /> AI Casting Call
+            </h4>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          
-          {/* AI Suggester Section (Casting Actor) */}
-          <div className="bg-indigo-950/20 border border-indigo-500/20 p-5 rounded-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-indigo-300 font-bold flex items-center gap-2 uppercase tracking-wider text-sm">
-                <Users size={18} /> Casting Actor
-              </h3>
-              
-              {isCustomTheme ? (
-                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 duration-300 flex-1 justify-end">
-                      <input 
-                          type="text" 
-                          value={theme}
-                          onChange={(e) => setTheme(e.target.value)}
-                          placeholder="Type custom theme..."
-                          className="bg-slate-900 border border-indigo-500/50 text-xs text-white rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none w-full max-w-[180px]"
-                          autoFocus
-                      />
-                      <button 
-                        onClick={() => { setIsCustomTheme(false); setTheme(DEFAULT_THEMES[0]); }}
-                        className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
-                        title="Back to presets"
-                      >
-                        <Undo2 size={14} />
-                      </button>
-                  </div>
-              ) : (
-                <select 
-                    value={theme}
-                    onChange={(e) => {
-                        if (e.target.value === 'CUSTOM') {
-                            setIsCustomTheme(true);
-                            setTheme('');
-                        } else {
-                            setIsCustomTheme(false); // Ensure we switch out of input mode if selecting a preset
-                            setTheme(e.target.value);
-                        }
-                    }}
-                    className="bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none max-w-[180px]"
-                >
-                    <optgroup label="Presets">
-                        {DEFAULT_THEMES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </optgroup>
-                    {customThemes.length > 0 && (
-                        <optgroup label="My Themes">
-                            {customThemes.map(t => <option key={t} value={t}>{t}</option>)}
-                        </optgroup>
-                    )}
-                    <option value="CUSTOM" className="font-bold text-indigo-300">✨ New Theme...</option>
-                </select>
-              )}
-            </div>
-
-            {/* Strict Mode Toggle */}
-            <div className="flex items-center justify-between bg-slate-900/50 p-2 rounded-lg border border-slate-700/50">
-                <div className="flex items-center gap-2">
-                    <div className={`p-1.5 rounded-md ${strictMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
-                        <Ear size={14} />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className={`text-xs font-bold ${strictMode ? 'text-emerald-300' : 'text-slate-400'}`}>
-                            Strict P-A-O Mode
-                        </span>
-                        <span className="text-[10px] text-slate-500">
-                            {strictMode ? "Person, Action & Object must match sounds" : "Only Person matches sounds"}
-                        </span>
-                    </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                        type="checkbox" 
-                        checked={strictMode} 
-                        onChange={(e) => setStrictMode(e.target.checked)} 
-                        className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-            </div>
-
-            {suggestions.length === 0 ? (
-               <button 
-               onClick={handleGenerate}
-               disabled={isGenerating}
-               className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition-all rounded-lg font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-900/20"
-             >
-               {isGenerating ? (
-                 <>
-                    <span className="animate-spin">✨</span> Casting...
-                 </>
-               ) : (
-                 <>
-                    {hasPersonInput ? (
-                        <>
-                            <Megaphone size={18} /> Audition Actions for "{person}"
-                        </>
-                    ) : (
-                        <>
-                            <Sparkles size={18} /> Start Casting Call
-                        </>
-                    )}
-                 </>
-               )}
-             </button>
+            {isCustomTheme ? (
+              <div className="flex items-center gap-1.5 max-w-xs">
+                <Input
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value)}
+                  placeholder="Type custom theme..."
+                  autoFocus
+                  className="h-8 text-xs"
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsCustomTheme(false);
+                    setTheme(DEFAULT_THEMES[0]);
+                  }}
+                  icon={<Undo2 className="w-3.5 h-3.5" />}
+                  title="Back to presets"
+                />
+              </div>
             ) : (
-                <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex justify-between items-end">
-                        <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-                            {hasPersonInput ? `Auditioning for ${person}` : `Casting Call: ${theme}`}
-                        </div>
-                        <button onClick={handleClearSuggestions} className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
-                            <X size={12} /> Clear
-                        </button>
-                    </div>
-
-                    <div className="grid gap-3">
-                        {suggestions.map((s, idx) => (
-                            <div 
-                                key={idx} 
-                                onClick={() => applySuggestion(s)}
-                                className="group p-4 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/50 rounded-xl cursor-pointer transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
-                            >
-                                {/* Header: Person & Description */}
-                                <div className="mb-4">
-                                    <div className="flex justify-between items-start">
-                                        <h4 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors">
-                                            {s.person}
-                                        </h4>
-                                    </div>
-                                    {(s.person_description || s.notes || s.reasoning) && (
-                                        <div className="mt-2 space-y-2">
-                                            {s.person_description && (
-                                                <div className="text-sm text-slate-400 italic leading-relaxed bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                                                    {s.person_description}
-                                                </div>
-                                            )}
-                                            {s.notes && (
-                                                <div className="text-xs text-indigo-400/80 font-mono bg-indigo-950/30 p-2 rounded border border-indigo-500/20 flex items-center gap-2">
-                                                    <Ear size={12} className="flex-shrink-0" />
-                                                    <span>{s.notes}</span>
-                                                </div>
-                                            )}
-                                            {!s.person_description && !s.notes && s.reasoning && (
-                                                <div className="text-sm text-slate-400 italic leading-relaxed bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                                                    {s.reasoning}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                {/* Action & Object Tags */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="flex flex-col gap-1 bg-slate-800/40 p-2 rounded-lg border border-slate-700/30 group-hover:border-emerald-500/30 transition-colors">
-                                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Action</span>
-                                        <span className="text-xs text-slate-200 font-medium truncate">{s.action}</span>
-                                    </div>
-                                    <div className="flex flex-col gap-1 bg-slate-800/40 p-2 rounded-lg border border-slate-700/30 group-hover:border-pink-500/30 transition-colors">
-                                        <span className="text-[10px] font-bold text-pink-500 uppercase tracking-wider">Object</span>
-                                        <span className="text-xs text-slate-200 font-medium truncate">{s.object}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    
-                    <button 
-                        onClick={handleGenerate}
-                        className="w-full py-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 border border-dashed border-indigo-500/30 rounded-lg hover:bg-indigo-950/30 transition-colors"
-                    >
-                        Re-cast (Try Again)
-                    </button>
-                </div>
-            )}
-
-            {error && (
-                <div className="text-rose-400 text-xs flex items-center gap-2 bg-rose-950/30 p-2 rounded">
-                    <AlertCircle size={14} /> {error}
-                </div>
+              <div className="w-48">
+                <Select
+                  value={theme}
+                  onChange={(e) => {
+                    if (e.target.value === 'CUSTOM') {
+                      setIsCustomTheme(true);
+                      setTheme('');
+                    } else {
+                      setIsCustomTheme(false);
+                      setTheme(e.target.value);
+                    }
+                  }}
+                  className="h-8 text-xs"
+                >
+                  <optgroup label="Presets">
+                    {DEFAULT_THEMES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {customThemes.length > 0 && (
+                    <optgroup label="My Themes">
+                      {customThemes.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <option value="CUSTOM">New Custom Theme...</option>
+                </Select>
+              </div>
             )}
           </div>
 
-          {/* Conflict Warning */}
-          {currentConflicts && (
-            <div className="bg-amber-950/30 border border-amber-600/50 p-4 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-                <AlertTriangle size={16} />
-                <span>Duplicate Detected</span>
+          {/* Strict Mode Toggle */}
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface border border-border text-xs">
+            <div className="flex items-center gap-2">
+              <Ear className="w-4 h-4 text-accent" />
+              <div>
+                <span className="font-semibold text-charcoal">Strict Major System Mode</span>
+                <p className="text-steel text-xs">
+                  {strictMode
+                    ? 'Person, Action, and Object must strictly match sounds'
+                    : 'Only Person must strictly match sounds'}
+                </p>
               </div>
-              <div className="text-xs text-amber-200 space-y-1">
-                {currentConflicts.person && (
-                  <div>• Person "{currentConflicts.person.value}" is already used in: {currentConflicts.person.numbers.map(n => n.toString().padStart(2, '0')).join(', ')}</div>
-                )}
-                {currentConflicts.action && (
-                  <div>• Action "{currentConflicts.action.value}" is already used in: {currentConflicts.action.numbers.map(n => n.toString().padStart(2, '0')).join(', ')}</div>
-                )}
-                {currentConflicts.object && (
-                  <div>• Object "{currentConflicts.object.value}" is already used in: {currentConflicts.object.numbers.map(n => n.toString().padStart(2, '0')).join(', ')}</div>
-                )}
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={strictMode}
+                onChange={(e) => setStrictMode(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-border rounded-full peer peer-checked:bg-accent peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-surface after:rounded-full after:h-4 after:w-4 after:transition-all" />
+            </label>
+          </div>
+
+          {/* Cast Trigger */}
+          {suggestions.length === 0 ? (
+            <Button
+              variant="accent"
+              size="md"
+              className="w-full"
+              loading={isGenerating}
+              onClick={handleGenerate}
+              icon={
+                hasPersonInput ? (
+                  <Megaphone className="w-4 h-4" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )
+              }
+            >
+              {hasPersonInput ? `Audition Actions for "${person}"` : 'Start Casting Call'}
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-steel">
+                <span>
+                  {hasPersonInput ? `Auditioning for ${person}` : `Casting: ${theme}`}
+                </span>
+                <Button size="sm" variant="ghost" onClick={handleClearSuggestions}>
+                  Clear
+                </Button>
               </div>
-              <p className="text-[10px] text-amber-300/80 italic">
-                Using the same elements across numbers can reduce memory effectiveness. Consider using unique combinations.
-              </p>
+
+              <div className="grid gap-2">
+                {suggestions.map((s, idx) => (
+                  <Card
+                    key={idx}
+                    variant="paper"
+                    padding="sm"
+                    interactive
+                    onClick={() => applySuggestion(s)}
+                    className="hover:border-accent"
+                  >
+                    <div className="flex justify-between items-start mb-1.5">
+                      <span className="font-semibold text-charcoal text-sm">{s.person}</span>
+                    </div>
+
+                    {(s.person_description || s.notes) && (
+                      <p className="text-xs text-steel mb-2 italic line-clamp-2">
+                        {s.person_description || s.notes}
+                      </p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-surface-subtle p-1.5 rounded border border-border-subtle">
+                        <span className="text-steel font-medium block">Action</span>
+                        <span className="text-charcoal font-semibold truncate block">
+                          {s.action}
+                        </span>
+                      </div>
+                      <div className="bg-surface-subtle p-1.5 rounded border border-border-subtle">
+                        <span className="text-steel font-medium block">Object</span>
+                        <span className="text-charcoal font-semibold truncate block">
+                          {s.object}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleGenerate}
+                loading={isGenerating}
+              >
+                Re-cast (Try Again)
+              </Button>
             </div>
           )}
 
-          {/* Manual Input Form */}
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Person (Character)</label>
-              <input 
-                type="text" 
-                value={person}
-                onChange={(e) => {
-                    setPerson(e.target.value);
-                    if (fieldErrors.person) setFieldErrors(prev => ({...prev, person: undefined}));
-                }}
-                placeholder="e.g. Albert Einstein"
-                className={`w-full bg-slate-800 border text-slate-100 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold ${fieldErrors.person ? 'border-rose-500' : 'border-slate-700'}`}
-              />
-              {fieldErrors.person && (
-                  <p className="text-rose-400 text-xs flex items-center gap-1 animate-in fade-in">
-                      <AlertCircle size={10} /> {fieldErrors.person}
-                  </p>
+          {error && <Notice variant="danger">{error}</Notice>}
+        </Card>
+
+        {/* Conflict Warning */}
+        {currentConflicts && (
+          <Notice variant="warning" title="Duplicate Elements Detected">
+            <div className="space-y-1 mt-1 text-xs">
+              {currentConflicts.person && (
+                <p>
+                  Person &ldquo;{currentConflicts.person.value}&rdquo; is already assigned to card #{currentConflicts.person.numbers.map((n) => n.toString().padStart(2, '0')).join(', ')}.
+                </p>
+              )}
+              {currentConflicts.action && (
+                <p>
+                  Action &ldquo;{currentConflicts.action.value}&rdquo; is already assigned to card #{currentConflicts.action.numbers.map((n) => n.toString().padStart(2, '0')).join(', ')}.
+                </p>
+              )}
+              {currentConflicts.object && (
+                <p>
+                  Object &ldquo;{currentConflicts.object.value}&rdquo; is already assigned to card #{currentConflicts.object.numbers.map((n) => n.toString().padStart(2, '0')).join(', ')}.
+                </p>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Action</label>
-                <input 
-                    type="text" 
-                    value={action}
-                    onChange={(e) => {
-                        setAction(e.target.value);
-                        if (fieldErrors.action) setFieldErrors(prev => ({...prev, action: undefined}));
-                    }}
-                    placeholder="e.g. Writing on board"
-                    className={`w-full bg-slate-800 border text-slate-100 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all ${fieldErrors.action ? 'border-rose-500' : 'border-slate-700'}`}
-                />
-                {fieldErrors.action && (
-                  <p className="text-rose-400 text-xs flex items-center gap-1 animate-in fade-in">
-                      <AlertCircle size={10} /> {fieldErrors.action}
-                  </p>
-                )}
-                </div>
-                <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Object</label>
-                <input 
-                    type="text" 
-                    value={object}
-                    onChange={(e) => {
-                        setObject(e.target.value);
-                        if (fieldErrors.object) setFieldErrors(prev => ({...prev, object: undefined}));
-                    }}
-                    placeholder="e.g. Chalk"
-                    className={`w-full bg-slate-800 border text-slate-100 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all ${fieldErrors.object ? 'border-rose-500' : 'border-slate-700'}`}
-                />
-                {fieldErrors.object && (
-                  <p className="text-rose-400 text-xs flex items-center gap-1 animate-in fade-in">
-                      <AlertCircle size={10} /> {fieldErrors.object}
-                  </p>
-                )}
-                </div>
-            </div>
-            
-            {/* Director's Cut Section */}
-            <div className="space-y-1 pt-2">
-                <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                        Visual Scene (Director's Cut)
-                    </label>
-                    <button 
-                        onClick={handleDirectorCut}
-                        disabled={isDirecting || !person || !action || !object}
-                        className="text-[10px] bg-indigo-600/20 hover:bg-indigo-600 hover:text-white text-indigo-300 px-2 py-1 rounded transition-colors flex items-center gap-1 disabled:opacity-30"
-                    >
-                       {isDirecting ? <span className="animate-spin">🎬</span> : <Clapperboard size={10} />}
-                       Auto-Write Scene
-                    </button>
-                </div>
-                <div className="relative">
-                    <textarea 
-                        value={scene}
-                        onChange={(e) => setScene(e.target.value)}
-                        placeholder={person && action ? `${person} doing ${action}... (describe the scene)` : "Describe the memorable scene..."}
-                        className="w-full bg-slate-800 border-slate-700 border text-slate-100 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all min-h-[120px] text-sm pb-6"
-                    />
-                    <div className={`absolute bottom-2 right-3 text-[10px] font-mono transition-colors ${scene.length > CHAR_LIMIT ? 'text-amber-400 font-bold' : 'text-slate-500'}`}>
-                        {scene.length} / {CHAR_LIMIT}
-                    </div>
-                </div>
-                
-                {/* Tip for Sensory Details */}
-                <div className="flex justify-between items-start mt-1">
-                    <p className="text-[10px] text-slate-500 pl-1">
-                        <span className="text-indigo-400 font-bold">Tip:</span> Be descriptive. Add <span className="text-slate-300">sensory details</span> (look, sound, feel, smell). Emphasize the <span className="text-slate-300">action and object</span>. Make it emotional.
-                    </p>
-                    {scene.length > CHAR_LIMIT && (
-                        <p className="text-[10px] text-amber-400/80 animate-in fade-in">
-                            * Keep it snappy!
-                        </p>
-                    )}
-                </div>
-            </div>
+          </Notice>
+        )}
 
-            {/* Visual Media Generation Section */}
-            {scene && (
-                <div className="space-y-3 pt-2 border-t border-slate-800">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                        Production Media
-                    </label>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Image Block */}
-                        <div className="space-y-2">
-                            {imageUrl ? (
-                                <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-700 bg-black">
-                                    <img src={imageUrl} alt="Memory Scene" className="w-full h-full object-cover" />
-                                    <button 
-                                        onClick={() => setImageUrl('')}
-                                        className="absolute top-2 right-2 p-1 bg-rose-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-                                </div>
-                            ) : (
-                                <button 
-                                    onClick={handleGenImage}
-                                    disabled={isGenMedia !== null}
-                                    className="w-full aspect-square rounded-lg border border-dashed border-slate-700 hover:border-indigo-500 bg-slate-800/30 hover:bg-slate-800 flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-indigo-400 transition-all disabled:opacity-50"
-                                >
-                                    {isGenMedia === 'image' ? (
-                                        <>
-                                            <Loader2 size={24} className="animate-spin" />
-                                            <span className="text-xs">Painting...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ImageIcon size={24} />
-                                            <span className="text-xs font-medium">Generate Image</span>
-                                        </>
-                                    )}
-                                </button>
-                            )}
-                        </div>
+        {/* Form Fields: Person, Action, Object */}
+        <div className="space-y-3">
+          <FormField label="Person (Character)" required error={fieldErrors.person}>
+            <Input
+              value={person}
+              onChange={(e) => {
+                setPerson(e.target.value);
+                if (fieldErrors.person) setFieldErrors((prev) => ({ ...prev, person: undefined }));
+              }}
+              placeholder="e.g. Albert Einstein"
+              error={Boolean(fieldErrors.person)}
+            />
+          </FormField>
 
-                        {/* Video Block */}
-                        <div className="space-y-2">
-                            {videoUrl ? (
-                                <div className="relative group aspect-video h-full rounded-lg overflow-hidden border border-slate-700 bg-black flex items-center justify-center">
-                                    <video src={videoUrl} className="w-full h-full object-cover" controls />
-                                    <button 
-                                        onClick={() => setVideoUrl('')}
-                                        className="absolute top-2 right-2 p-1 bg-rose-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-                                </div>
-                            ) : (
-                                <button 
-                                    onClick={handleGenVideo}
-                                    disabled={isGenMedia !== null}
-                                    className="w-full h-full min-h-[120px] rounded-lg border border-dashed border-slate-700 hover:border-indigo-500 bg-slate-800/30 hover:bg-slate-800 flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-indigo-400 transition-all disabled:opacity-50"
-                                >
-                                    {isGenMedia === 'video' ? (
-                                        <>
-                                            <Loader2 size={24} className="animate-spin" />
-                                            <span className="text-xs">Filming (Veo)...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <VideoIcon size={24} />
-                                            <span className="text-xs font-medium">Generate Video (Veo)</span>
-                                        </>
-                                    )}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                    <p className="text-[10px] text-slate-600 italic">
-                        * Videos require a paid project API key. Images use standard quota.
-                    </p>
-                </div>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label="Action" required error={fieldErrors.action}>
+              <Input
+                value={action}
+                onChange={(e) => {
+                  setAction(e.target.value);
+                  if (fieldErrors.action)
+                    setFieldErrors((prev) => ({ ...prev, action: undefined }));
+                }}
+                placeholder="e.g. Chalking formulas"
+                error={Boolean(fieldErrors.action)}
+              />
+            </FormField>
 
+            <FormField label="Object" required error={fieldErrors.object}>
+              <Input
+                value={object}
+                onChange={(e) => {
+                  setObject(e.target.value);
+                  if (fieldErrors.object)
+                    setFieldErrors((prev) => ({ ...prev, object: undefined }));
+                }}
+                placeholder="e.g. Blackboard"
+                error={Boolean(fieldErrors.object)}
+              />
+            </FormField>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900">
-            <div className="flex justify-between items-center mb-3">
-                <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span>Saves instantly to device • Syncs to cloud automatically</span>
-                </div>
+        {/* Scene (Director's Cut) */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-charcoal">
+              Visual Scene (Director&apos;s Cut)
+            </label>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isDirecting || !person || !action || !object}
+              loading={isDirecting}
+              onClick={handleDirectorCut}
+              icon={<Clapperboard className="w-3.5 h-3.5 text-accent" />}
+            >
+              Auto-Write Scene
+            </Button>
+          </div>
+
+          <div className="relative">
+            <Textarea
+              rows={3}
+              value={scene}
+              onChange={(e) => setScene(e.target.value)}
+              placeholder={
+                person && action
+                  ? `${person} doing ${action} with ${object || '...'}`
+                  : 'Describe the sensory, memorable scene...'
+              }
+            />
+            <span
+              className={`absolute bottom-2 right-2 text-xs font-mono ${
+                scene.length > CHAR_LIMIT ? 'text-conflict font-bold' : 'text-steel/70'
+              }`}
+            >
+              {scene.length} / {CHAR_LIMIT}
+            </span>
+          </div>
+          <p className="text-xs text-steel">
+            Use vivid sensory anchors (sight, sound, motion) linking the person, action, and object.
+          </p>
+        </div>
+
+        {/* Production Media (Image/Video) */}
+        {(scene || imageUrl || videoUrl) && (
+          <div className="space-y-2 pt-2 border-t border-border">
+            <label className="text-xs font-semibold text-charcoal">Production Media</label>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Image */}
+              <div className="space-y-1">
+                {imageUrl ? (
+                  <div className="relative group aspect-video rounded-lg overflow-hidden border border-border bg-charcoal">
+                    <img src={imageUrl} alt="Scene" className="w-full h-full object-cover" />
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => setImageUrl('')}
+                      className="absolute top-1 right-1 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      icon={<Trash2 className="w-3 h-3" />}
+                    />
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full h-24 flex flex-col gap-1 border-dashed"
+                    loading={isGenMedia === 'image'}
+                    onClick={handleGenImage}
+                    icon={<ImageIcon className="w-5 h-5 text-steel" />}
+                  >
+                    Generate Image
+                  </Button>
+                )}
+              </div>
+
+              {/* Video */}
+              <div className="space-y-1">
+                {videoUrl ? (
+                  <div className="relative group aspect-video rounded-lg overflow-hidden border border-border bg-charcoal">
+                    <video src={videoUrl} controls className="w-full h-full object-cover" />
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => setVideoUrl('')}
+                      className="absolute top-1 right-1 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      icon={<Trash2 className="w-3 h-3" />}
+                    />
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full h-24 flex flex-col gap-1 border-dashed"
+                    loading={isGenMedia === 'video'}
+                    onClick={handleGenVideo}
+                    icon={<VideoIcon className="w-5 h-5 text-steel" />}
+                  >
+                    Generate Video (Veo)
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex justify-end gap-3">
-                <button onClick={onClose} className="px-4 py-2 rounded-lg text-slate-400 hover:text-white transition-colors">Cancel</button>
-                <button 
-                    onClick={handleSave}
-                    className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-emerald-900/20 transition-all active:scale-95"
-                >
-                    <Save size={18} /> Save PAO
-                </button>
-            </div>
+          </div>
+        )}
+
+        {/* Modal Footer Actions */}
+        <div className="flex items-center justify-between pt-4 border-t border-border">
+          <span className="text-xs text-steel">Autosaves locally to active version</span>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="accent" onClick={handleSave} icon={<Save className="w-4 h-4" />}>
+              Save PAO
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
