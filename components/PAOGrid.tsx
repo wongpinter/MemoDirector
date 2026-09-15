@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { PAOItem } from '../types';
+import { getPhoneticsForNumber } from '../constants';
 import {
   CheckCircle2,
   Circle,
@@ -47,6 +48,7 @@ const PAOCard: React.FC<PAOCardProps> = ({ item, onSelect, conflicts }) => {
   const hasConflict = Boolean(conflicts);
 
   const formattedNum = item.number.toString().padStart(2, '0');
+  const phonetics = getPhoneticsForNumber(item.number);
 
   return (
     <div
@@ -62,14 +64,14 @@ const PAOCard: React.FC<PAOCardProps> = ({ item, onSelect, conflicts }) => {
       }}
       onMouseEnter={handleMouseEnter}
       className={`
-        relative group cursor-pointer p-4 rounded-xl border transition-all duration-150 text-left z-0 hover:z-30
+        relative group cursor-pointer p-3.5 rounded-xl border border-l-4 transition-all duration-150 text-left z-0 hover:z-30
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
         ${
           hasConflict
-            ? 'bg-conflict-light/40 border-conflict/60 hover:border-conflict hover:shadow-md'
+            ? 'bg-conflict-light/30 border-conflict/50 border-l-conflict hover:border-conflict hover:shadow-md'
             : isComplete
-            ? 'bg-surface border-border hover:border-accent hover:shadow-md shadow-sm'
-            : 'bg-surface/50 border-border-subtle hover:bg-surface hover:border-border'
+            ? 'bg-surface border-border border-l-accent hover:border-accent hover:shadow-md shadow-sm'
+            : 'bg-surface/60 border-border-subtle border-l-border hover:bg-surface hover:border-border'
         }
       `}
     >
@@ -114,24 +116,32 @@ const PAOCard: React.FC<PAOCardProps> = ({ item, onSelect, conflicts }) => {
         </div>
       )}
 
-      {/* Card Header: Number + Indicators */}
-      <div className="flex justify-between items-start mb-2">
-        <span
-          className={`
-            font-display text-3xl font-bold tracking-tight transition-colors
-            ${
-              hasConflict
-                ? 'text-conflict'
-                : isComplete
-                ? 'text-charcoal group-hover:text-accent'
-                : 'text-steel/60 group-hover:text-steel'
-            }
-          `}
-        >
-          {formattedNum}
-        </span>
+      {/* Card Header: Number + Phonetic Hint + Indicators */}
+      <div className="flex justify-between items-center pb-2.5 mb-2.5 border-b border-border/70">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span
+            className={`
+              font-display text-2xl sm:text-3xl font-bold tracking-tight transition-colors flex-shrink-0
+              ${
+                hasConflict
+                  ? 'text-conflict'
+                  : isComplete
+                  ? 'text-charcoal group-hover:text-accent'
+                  : 'text-steel/60 group-hover:text-steel'
+              }
+            `}
+          >
+            {formattedNum}
+          </span>
+          <span
+            className="font-mono text-xs text-steel/60 hidden sm:inline-block truncate max-w-28"
+            title={phonetics}
+          >
+            {phonetics}
+          </span>
+        </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {hasConflict && (
             <span title="Conflict in this card">
               <AlertTriangle className="w-4 h-4 text-conflict" />
@@ -147,26 +157,51 @@ const PAOCard: React.FC<PAOCardProps> = ({ item, onSelect, conflicts }) => {
         </div>
       </div>
 
-      {/* Card Body: Person / Action / Object */}
-      <div className="space-y-1">
+      {/* Character (Person) Hero */}
+      <div className="mb-2.5">
+        <span className="text-xs font-semibold uppercase tracking-wider text-steel/60 block mb-0.5">
+          Character
+        </span>
         {item.person ? (
-          <div className="font-semibold text-charcoal truncate text-sm">
+          <div className="font-display font-bold text-base text-charcoal group-hover:text-accent transition-colors truncate">
             {item.person}
           </div>
         ) : (
-          <div className="h-5 bg-border-subtle rounded w-3/4 animate-pulse" />
+          <div className="text-xs text-steel/40 italic py-0.5">Not cast</div>
         )}
+      </div>
 
-        <div className="text-xs text-steel flex flex-col gap-0.5">
-          <span className="truncate">{item.action || '—'}</span>
-          <span className="truncate font-medium text-accent-dark">{item.object || '—'}</span>
+      {/* Action & Object Structured Grid */}
+      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border-subtle">
+        <div className="bg-surface-subtle p-2 rounded-lg border border-border-subtle overflow-hidden">
+          <span className="text-xs font-semibold text-steel block uppercase tracking-wider">
+            Action
+          </span>
+          <span className="text-xs font-medium text-charcoal truncate block mt-0.5">
+            {item.action || <span className="text-steel/40 italic">Empty</span>}
+          </span>
+        </div>
+
+        <div className="bg-accent-light/50 p-2 rounded-lg border border-accent/20 overflow-hidden">
+          <span className="text-xs font-semibold text-accent block uppercase tracking-wider">
+            Object
+          </span>
+          <span className="text-xs font-semibold text-charcoal truncate block mt-0.5">
+            {item.object || <span className="text-steel/40 italic">Empty</span>}
+          </span>
         </div>
       </div>
 
-      {/* Edit Hint on Hover */}
-      <div className="mt-3 pt-2 border-t border-border-subtle flex items-center justify-between text-xs text-steel opacity-0 group-hover:opacity-100 transition-opacity">
-        <span className="text-steel/70">Card #{formattedNum}</span>
-        <span className="font-medium text-accent flex items-center gap-1">
+      {/* Footer Info & Edit Hint */}
+      <div className="mt-2.5 pt-2 border-t border-border-subtle flex items-center justify-between text-xs text-steel">
+        {hasScene ? (
+          <span className="text-accent flex items-center gap-1 font-medium">
+            <Clapperboard className="w-3 h-3" /> Scene
+          </span>
+        ) : (
+          <span className="text-steel/50 font-mono">#{formattedNum}</span>
+        )}
+        <span className="font-medium text-accent opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
           <Edit3 className="w-3 h-3" /> Edit
         </span>
       </div>
