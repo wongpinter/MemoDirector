@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   Video as VideoIcon,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { detectConflicts } from '../utils/conflictDetection';
 import {
@@ -597,15 +598,24 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({
                     />
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full h-24 flex flex-col gap-1 border-dashed"
-                    loading={isGenMedia === 'image'}
+                  <button
+                    type="button"
+                    disabled={isGenMedia !== null}
                     onClick={handleGenImage}
-                    icon={<ImageIcon className="w-5 h-5 text-steel" />}
+                    className="w-full aspect-video rounded-lg border border-dashed border-border hover:border-accent bg-surface-subtle/50 hover:bg-surface flex flex-col items-center justify-center gap-1.5 text-steel hover:text-charcoal transition-colors disabled:opacity-50 disabled:cursor-not-allowed group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    Generate Image
-                  </Button>
+                    {isGenMedia === 'image' ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin text-accent" />
+                        <span className="text-xs font-medium text-accent">Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-5 h-5 text-steel group-hover:text-accent transition-colors" />
+                        <span className="text-xs font-medium">Generate Image</span>
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
 
@@ -623,15 +633,24 @@ export const PAOEditor: React.FC<PAOEditorProps> = ({
                     />
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full h-24 flex flex-col gap-1 border-dashed"
-                    loading={isGenMedia === 'video'}
+                  <button
+                    type="button"
+                    disabled={isGenMedia !== null}
                     onClick={handleGenVideo}
-                    icon={<VideoIcon className="w-5 h-5 text-steel" />}
+                    className="w-full aspect-video rounded-lg border border-dashed border-border hover:border-accent bg-surface-subtle/50 hover:bg-surface flex flex-col items-center justify-center gap-1.5 text-steel hover:text-charcoal transition-colors disabled:opacity-50 disabled:cursor-not-allowed group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    Generate Video (Veo)
-                  </Button>
+                    {isGenMedia === 'video' ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin text-accent" />
+                        <span className="text-xs font-medium text-accent">Filming (Veo)...</span>
+                      </>
+                    ) : (
+                      <>
+                        <VideoIcon className="w-5 h-5 text-steel group-hover:text-accent transition-colors" />
+                        <span className="text-xs font-medium">Generate Video (Veo)</span>
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
             </div>
