@@ -118,10 +118,10 @@ const PAOCard: React.FC<PAOCardProps> = ({ item, onSelect, conflicts }) => {
 
       {/* Card Header: Number + Phonetic Hint + Indicators */}
       <div className="flex justify-between items-center pb-2.5 mb-2.5 border-b border-border/70">
-        <div className="flex items-baseline gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <span
             className={`
-              font-display text-2xl sm:text-3xl font-bold tracking-tight transition-colors flex-shrink-0
+              font-display text-2xl sm:text-3xl font-bold tracking-tight transition-colors flex-shrink-0 leading-none
               ${
                 hasConflict
                   ? 'text-conflict'
@@ -134,7 +134,7 @@ const PAOCard: React.FC<PAOCardProps> = ({ item, onSelect, conflicts }) => {
             {formattedNum}
           </span>
           <span
-            className="font-mono text-xs text-steel/60 hidden sm:inline-block truncate max-w-28"
+            className="font-mono text-xs text-steel/60 hidden sm:inline-block truncate max-w-28 self-center"
             title={phonetics}
           >
             {phonetics}
