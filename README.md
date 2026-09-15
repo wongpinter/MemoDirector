@@ -1,6 +1,6 @@
 # MemoDirector
 
-MemoDirector is a static, local-first single-page application designed for building, managing, and drilling a Person-Action-Object (PAO) memory system using the Major System phonetic encoding rules. It ingests user PAO card inputs and AI casting prompts, and emits structured Anki flashcard decks (.apkg) for spaced repetition practice.
+MemoDirector is a static, local-first single-page application designed for building, managing, and drilling a Person-Action-Object (PAO) memory system using the Major System phonetic encoding rules. It ingests user PAO card inputs and AI casting prompts, and emits formatted Anki flashcard decks (.txt TSV) for spaced repetition practice.
 
 The application operates entirely client-side, using browser LocalStorage for immediate persistence and metadata versioning. It supports optional, asynchronous multi-device synchronization and media uploads via a Supabase backend integration, falling back gracefully to offline mode when unconfigured.
 

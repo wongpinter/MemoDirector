@@ -11,7 +11,19 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
+      '@': path.resolve(import.meta.dirname, '.'),
+    }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-recharts': ['recharts'],
+          'vendor-genai': ['@google/genai'],
+          'vendor-icons': ['lucide-react'],
+        }
+      }
     }
   }
 });

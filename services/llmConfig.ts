@@ -230,8 +230,8 @@ export function getDefaultModel(provider: LLMProvider): string {
 
 // ── public: preferred provider ────────────────────────────────────
 
-export function getPreferredProvider(): string | null {
-  return localStorage.getItem(PREFERRED_PROVIDER_KEY);
+export function getPreferredProvider(): LLMProvider | null {
+  return (localStorage.getItem(PREFERRED_PROVIDER_KEY) as LLMProvider) || null;
 }
 
 export function setPreferredProvider(provider: LLMProvider): void {

@@ -1,19 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Grid, Search, BookOpen, Settings as SettingsIcon, Clapperboard, Loader2, Check, Cloud, CloudOff, RefreshCw, Clock, User as UserIcon, LogIn } from 'lucide-react';
 import { PAOGrid } from './components/PAOGrid';
-import { Settings } from './components/Settings';
-import { ReverseLookup } from './components/ReverseLookup';
-import { Landing } from './components/Landing';
-import { PAOEditor } from './components/PAOEditor';
-import { MajorSystemTrainer } from './components/MajorSystemTrainer';
 import { VersionManager } from './components/VersionManager';
-import { AuthModal } from './components/AuthModal';
-import { UserProfile } from './components/UserProfile';
 import { PAOItem } from './types';
 import { usePAOData } from './hooks';
 import { ToastProvider } from './contexts';
 import { initializeAuth, onAuthChange, isAuthenticated, getUserDisplayName, isAnonymousMode } from './services/auth';
 import { User } from '@supabase/supabase-js';
+
+const Settings = React.lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
+const ReverseLookup = React.lazy(() => import('./components/ReverseLookup').then(m => ({ default: m.ReverseLookup })));
+const Landing = React.lazy(() => import('./components/Landing').then(m => ({ default: m.Landing })));
+const PAOEditor = React.lazy(() => import('./components/PAOEditor').then(m => ({ default: m.PAOEditor })));
+const MajorSystemTrainer = React.lazy(() => import('./components/MajorSystemTrainer').then(m => ({ default: m.MajorSystemTrainer })));
+const AuthModal = React.lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
+const UserProfile = React.lazy(() => import('./components/UserProfile').then(m => ({ default: m.UserProfile })));
 
 enum Tab {
   GRID = 'GRID',
@@ -138,7 +139,9 @@ export default function App() {
   return (
     <ToastProvider>
       {showLanding ? (
-        <Landing onEnter={handleEnterApp} />
+        <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-500"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+          <Landing onEnter={handleEnterApp} />
+        </Suspense>
       ) : (
       <div className="h-screen flex flex-col w-full bg-slate-900 text-slate-50 overflow-hidden">
         {/* Header */}
@@ -249,7 +252,7 @@ export default function App() {
                 <p>Opening Studio...</p>
               </div>
             ) : (
-              <>
+              <Suspense fallback={<div className="h-64 flex items-center justify-center text-slate-500"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
                 {activeTab === Tab.GRID && (
                   <PAOGrid
                     items={items}
@@ -266,35 +269,41 @@ export default function App() {
                 )}
                 {activeTab === Tab.SYSTEM && <MajorSystemTrainer />}
                 {activeTab === Tab.SETTINGS && <Settings items={items} onSelect={(num) => setSelectedNumber(num)} onRestore={updateItems} />}
-              </>
+              </Suspense>
             )}
           </div>
         </main>
 
         {/* Editor Modal */}
         {selectedNumber !== null && (
-          <PAOEditor
-            number={selectedNumber}
-            initialData={getEditorInitialData()}
-            onClose={handleCloseEditor}
-            onSave={updateItem}
-            allItems={items}
-          />
+          <Suspense fallback={null}>
+            <PAOEditor
+              number={selectedNumber}
+              initialData={getEditorInitialData()}
+              onClose={handleCloseEditor}
+              onSave={updateItem}
+              allItems={items}
+            />
+          </Suspense>
         )}
 
         {/* Auth Modal */}
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={handleAuthSuccess}
-        />
+        <Suspense fallback={null}>
+          <AuthModal
+            isOpen={showAuthModal}
+            onClose={() => setShowAuthModal(false)}
+            onSuccess={handleAuthSuccess}
+          />
+        </Suspense>
 
         {/* User Profile Modal */}
-        <UserProfile
-          isOpen={showProfileModal}
-          onClose={() => setShowProfileModal(false)}
-          onSignOut={handleSignOut}
-        />
+        <Suspense fallback={null}>
+          <UserProfile
+            isOpen={showProfileModal}
+            onClose={() => setShowProfileModal(false)}
+            onSignOut={handleSignOut}
+          />
+        </Suspense>
       </div>
       )}
     </ToastProvider>

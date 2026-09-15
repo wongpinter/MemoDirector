@@ -1,4 +1,4 @@
-import { MAJOR_SYSTEM } from "./types";
+import { MAJOR_SYSTEM } from "./types.ts";
 
 export const TOTAL_NUMBERS = 100; // 00 to 99
 

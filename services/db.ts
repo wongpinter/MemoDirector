@@ -57,7 +57,7 @@ export const loadPAOList = async (): Promise<PAOItem[]> => {
 };
 
 export const loadPAOListFromRemote = async (): Promise<PAOItem[]> => {
-  if (!isRemoteReadyForSync()) {
+  if (!isRemoteReadyForSync() || !supabase) {
     throw new Error("Remote sync not available or user not authenticated");
   }
 
@@ -92,7 +92,7 @@ export const loadPAOListFromRemote = async (): Promise<PAOItem[]> => {
 
 export const savePAOList = async (items: PAOItem[]) => {
   // Only sync to Remote if enabled
-  if (!isRemoteReadyForSync()) {
+  if (!isRemoteReadyForSync() || !supabase) {
     console.log("ℹ️ Remote sync not enabled or anonymous mode, skipping cloud sync");
     throw new Error("Remote not available for save");
   }
@@ -180,7 +180,7 @@ export interface LoadVersionsResult {
  * Load all versions from Supabase
  */
 export const loadVersions = async (): Promise<LoadVersionsResult> => {
-  if (!isRemoteReadyForSync()) {
+  if (!isRemoteReadyForSync() || !supabase) {
     return { versions: [] };
   }
 
@@ -225,7 +225,7 @@ export const loadVersions = async (): Promise<LoadVersionsResult> => {
  * Save a version to Supabase
  */
 export const saveVersion = async (version: PAOVersion): Promise<void> => {
-  if (!isRemoteReadyForSync()) {
+  if (!isRemoteReadyForSync() || !supabase) {
     console.log("ℹ️ Remote sync not enabled, skipping version save");
     return;
   }
@@ -273,7 +273,7 @@ export const deleteVersionFromFirebase = async (versionId: string): Promise<void
 };
 
 export const deleteVersionFromRemote = async (versionId: string): Promise<void> => {
-  if (!isRemoteReadyForSync()) return;
+  if (!isRemoteReadyForSync() || !supabase) return;
 
   try {
     const userId = getCurrentUserId();

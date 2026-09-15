@@ -29,7 +29,7 @@ const features = [
   {
     icon: <Download size={20} className="text-cyan-400" />,
     title: 'Anki Export',
-    desc: 'Export your deck to .apkg format for spaced repetition practice. Complete cards with phonetics, or minimalist quick-review versions.',
+    desc: 'Export your deck to Anki format for spaced repetition practice. Complete cards with phonetics, or minimalist quick-review versions.',
   },
   {
     icon: <Wifi size={20} className="text-rose-400" />,
